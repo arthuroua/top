@@ -1,6 +1,6 @@
-﻿"use client";
+"use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 type SearchResponse = {
   vin: string;
@@ -24,7 +24,70 @@ type VehicleResponse = {
   }>;
 };
 
+type AdvisorPayload = {
+  target_sell_price_usd: number;
+  desired_margin_usd: number;
+  fees_usd: number;
+  logistics_usd: number;
+  customs_usd: number;
+  repair_usd: number;
+  local_costs_usd: number;
+  risk_buffer_usd: number;
+};
+
+type AdvisorScenario = {
+  name: string;
+  max_bid_usd: number;
+};
+
+type AdvisorResponse = {
+  total_no_bid_usd: number;
+  max_bid_usd: number;
+  scenarios: AdvisorScenario[];
+};
+
+type AdvisorForm = {
+  target_sell_price_usd: string;
+  desired_margin_usd: string;
+  fees_usd: string;
+  logistics_usd: string;
+  customs_usd: string;
+  repair_usd: string;
+  local_costs_usd: string;
+  risk_buffer_usd: string;
+};
+
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
+
+const DEFAULT_ADVISOR_FORM: AdvisorForm = {
+  target_sell_price_usd: "17000",
+  desired_margin_usd: "1800",
+  fees_usd: "1100",
+  logistics_usd: "1650",
+  customs_usd: "2900",
+  repair_usd: "2700",
+  local_costs_usd: "600",
+  risk_buffer_usd: "900"
+};
+
+function toMoney(value: number): string {
+  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(
+    value
+  );
+}
+
+function toPayload(form: AdvisorForm): AdvisorPayload {
+  return {
+    target_sell_price_usd: Number(form.target_sell_price_usd),
+    desired_margin_usd: Number(form.desired_margin_usd),
+    fees_usd: Number(form.fees_usd),
+    logistics_usd: Number(form.logistics_usd),
+    customs_usd: Number(form.customs_usd),
+    repair_usd: Number(form.repair_usd),
+    local_costs_usd: Number(form.local_costs_usd),
+    risk_buffer_usd: Number(form.risk_buffer_usd)
+  };
+}
 
 export default function SearchPage() {
   const [vin, setVin] = useState("1HGCM82633A004352");
@@ -33,7 +96,17 @@ export default function SearchPage() {
   const [search, setSearch] = useState<SearchResponse | null>(null);
   const [vehicle, setVehicle] = useState<VehicleResponse | null>(null);
 
-  async function onSubmit(e: React.FormEvent) {
+  const [advisorForm, setAdvisorForm] = useState<AdvisorForm>(DEFAULT_ADVISOR_FORM);
+  const [advisorLoading, setAdvisorLoading] = useState(false);
+  const [advisorError, setAdvisorError] = useState("");
+  const [advisorResult, setAdvisorResult] = useState<AdvisorResponse | null>(null);
+
+  const advisorScenarioMap = useMemo(() => {
+    if (!advisorResult) return new Map<string, number>();
+    return new Map(advisorResult.scenarios.map((s) => [s.name, s.max_bid_usd]));
+  }, [advisorResult]);
+
+  async function onSearchSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     setError("");
@@ -59,6 +132,51 @@ export default function SearchPage() {
     }
   }
 
+  function onAdvisorFieldChange(field: keyof AdvisorForm, value: string) {
+    setAdvisorForm((prev) => ({ ...prev, [field]: value }));
+  }
+
+  async function onAdvisorSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setAdvisorLoading(true);
+    setAdvisorError("");
+    setAdvisorResult(null);
+
+    const payload = toPayload(advisorForm);
+    if (!Number.isFinite(payload.target_sell_price_usd) || payload.target_sell_price_usd <= 0) {
+      setAdvisorLoading(false);
+      setAdvisorError("Target sell price must be greater than 0.");
+      return;
+    }
+
+    const fields = Object.entries(payload) as Array<[keyof AdvisorPayload, number]>;
+    const hasInvalid = fields.some(([, value]) => !Number.isFinite(value) || value < 0);
+    if (hasInvalid) {
+      setAdvisorLoading(false);
+      setAdvisorError("All cost fields must be valid non-negative numbers.");
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_BASE}/api/v1/advisor/calculate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to calculate advisor result");
+      }
+
+      const json = (await response.json()) as AdvisorResponse;
+      setAdvisorResult(json);
+    } catch (err) {
+      setAdvisorError(err instanceof Error ? err.message : "Advisor request failed");
+    } finally {
+      setAdvisorLoading(false);
+    }
+  }
+
   return (
     <main className="shell">
       <section className="panel">
@@ -66,7 +184,7 @@ export default function SearchPage() {
         <h1>VIN Search</h1>
         <p className="lead">Enter a 17-character VIN to load auction history and sold-price trail.</p>
 
-        <form onSubmit={onSubmit} className="searchForm">
+        <form onSubmit={onSearchSubmit} className="searchForm">
           <label htmlFor="vin">VIN</label>
           <div className="searchRow">
             <input
@@ -122,7 +240,7 @@ export default function SearchPage() {
                 <p className="label">{lot.source}</p>
                 <h3>Lot #{lot.lot_number}</h3>
                 <p>Date: {lot.sale_date}</p>
-                <p>Price: ${lot.hammer_price_usd}</p>
+                <p>Price: {toMoney(lot.hammer_price_usd)}</p>
                 <p>Status: {lot.status}</p>
                 <p>Location: {lot.location}</p>
               </article>
@@ -130,6 +248,149 @@ export default function SearchPage() {
           </div>
         </section>
       )}
+
+      <section className="panel">
+        <p className="chip">Bid Strategy</p>
+        <h2>Max Bid Advisor</h2>
+        <p className="lead">Fill your cost assumptions and get a safe bid ceiling before auction.</p>
+
+        <form className="advisorForm" onSubmit={onAdvisorSubmit}>
+          <label>
+            Target sell price (USD)
+            <input
+              type="number"
+              min={1}
+              step="100"
+              value={advisorForm.target_sell_price_usd}
+              onChange={(e) => onAdvisorFieldChange("target_sell_price_usd", e.target.value)}
+              required
+            />
+          </label>
+          <label>
+            Desired margin (USD)
+            <input
+              type="number"
+              min={0}
+              step="50"
+              value={advisorForm.desired_margin_usd}
+              onChange={(e) => onAdvisorFieldChange("desired_margin_usd", e.target.value)}
+              required
+            />
+          </label>
+          <label>
+            Auction fees (USD)
+            <input
+              type="number"
+              min={0}
+              step="50"
+              value={advisorForm.fees_usd}
+              onChange={(e) => onAdvisorFieldChange("fees_usd", e.target.value)}
+              required
+            />
+          </label>
+          <label>
+            Logistics (USD)
+            <input
+              type="number"
+              min={0}
+              step="50"
+              value={advisorForm.logistics_usd}
+              onChange={(e) => onAdvisorFieldChange("logistics_usd", e.target.value)}
+              required
+            />
+          </label>
+          <label>
+            Customs (USD)
+            <input
+              type="number"
+              min={0}
+              step="50"
+              value={advisorForm.customs_usd}
+              onChange={(e) => onAdvisorFieldChange("customs_usd", e.target.value)}
+              required
+            />
+          </label>
+          <label>
+            Repair (USD)
+            <input
+              type="number"
+              min={0}
+              step="50"
+              value={advisorForm.repair_usd}
+              onChange={(e) => onAdvisorFieldChange("repair_usd", e.target.value)}
+              required
+            />
+          </label>
+          <label>
+            Local costs (USD)
+            <input
+              type="number"
+              min={0}
+              step="50"
+              value={advisorForm.local_costs_usd}
+              onChange={(e) => onAdvisorFieldChange("local_costs_usd", e.target.value)}
+              required
+            />
+          </label>
+          <label>
+            Risk buffer (USD)
+            <input
+              type="number"
+              min={0}
+              step="50"
+              value={advisorForm.risk_buffer_usd}
+              onChange={(e) => onAdvisorFieldChange("risk_buffer_usd", e.target.value)}
+              required
+            />
+          </label>
+
+          <div className="advisorActions">
+            <button type="submit" disabled={advisorLoading}>
+              {advisorLoading ? "Calculating" : "Calculate Max Bid"}
+            </button>
+          </div>
+        </form>
+
+        {advisorError && (
+          <div className="errorPanel inlineError">
+            <p>{advisorError}</p>
+          </div>
+        )}
+
+        {advisorResult && (
+          <div className="advisorResult">
+            <div className="stats">
+              <article className="panel statCard">
+                <p className="label">Total No Bid</p>
+                <h3>{toMoney(advisorResult.total_no_bid_usd)}</h3>
+              </article>
+              <article className="panel statCard">
+                <p className="label">Max Bid (Base)</p>
+                <h3>{toMoney(advisorResult.max_bid_usd)}</h3>
+              </article>
+              <article className="panel statCard">
+                <p className="label">Recommendation</p>
+                <h3>{advisorResult.max_bid_usd > 0 ? "Bid <= Base" : "Skip Lot"}</h3>
+              </article>
+            </div>
+
+            <div className="scenarioGrid">
+              <article className="lotCard">
+                <p className="label">Low Scenario</p>
+                <h3>{toMoney(advisorScenarioMap.get("low") ?? 0)}</h3>
+              </article>
+              <article className="lotCard">
+                <p className="label">Base Scenario</p>
+                <h3>{toMoney(advisorScenarioMap.get("base") ?? 0)}</h3>
+              </article>
+              <article className="lotCard">
+                <p className="label">High Scenario</p>
+                <h3>{toMoney(advisorScenarioMap.get("high") ?? 0)}</h3>
+              </article>
+            </div>
+          </div>
+        )}
+      </section>
     </main>
   );
 }

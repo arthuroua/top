@@ -140,6 +140,40 @@ p {
   gap: 10px;
 }
 
+.advisorForm {
+  margin-top: 14px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.advisorForm label {
+  display: grid;
+  gap: 6px;
+  color: var(--text);
+  font-size: 0.93rem;
+}
+
+.advisorActions {
+  grid-column: 1 / -1;
+}
+
+.advisorResult {
+  margin-top: 14px;
+  display: grid;
+  gap: 12px;
+}
+
+.scenarioGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.inlineError {
+  margin-top: 12px;
+}
+
 input {
   width: 100%;
   min-height: 44px;
@@ -220,6 +254,10 @@ button:disabled {
   .lotsGrid {
     grid-template-columns: 1fr;
   }
+
+  .scenarioGrid {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 640px) {
@@ -235,6 +273,10 @@ button:disabled {
   }
 
   .searchRow {
+    grid-template-columns: 1fr;
+  }
+
+  .advisorForm {
     grid-template-columns: 1fr;
   }
 }
