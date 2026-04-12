@@ -1,4 +1,6 @@
-﻿from pydantic import BaseModel, Field
+﻿from datetime import datetime
+
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class SearchResult(BaseModel):
@@ -45,3 +47,19 @@ class AdvisorOutput(BaseModel):
     total_no_bid_usd: float
     max_bid_usd: float
     scenarios: list[AdvisorScenario]
+
+
+class AdvisorReportCreate(BaseModel):
+    vin: str = Field(min_length=17, max_length=17)
+    assumptions: AdvisorInput
+    result: AdvisorOutput
+
+
+class AdvisorReportRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    vin: str
+    assumptions: AdvisorInput
+    result: AdvisorOutput
+    created_at: datetime

@@ -15,6 +15,8 @@ This repository contains the first working skeleton for a service focused on imp
 - `GET /api/v1/search?vin=...`
 - `GET /api/v1/vehicles/{vin}`
 - `POST /api/v1/advisor/calculate`
+- `POST /api/v1/reports`
+- `GET /api/v1/reports/{id}`
 
 ## Quick start (Docker)
 
@@ -38,4 +40,5 @@ docker compose up --build
 ## Notes
 
 - This skeleton uses mock vehicle/lot data to unblock product and UI development.
+- Advisor reports are persisted in `advisor_reports` and linked to VIN.
 - Real data ingestion should be connected only through licensed Copart/IAA channels.

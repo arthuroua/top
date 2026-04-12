@@ -46,6 +46,14 @@ type AdvisorResponse = {
   scenarios: AdvisorScenario[];
 };
 
+type AdvisorReportResponse = {
+  id: string;
+  vin: string;
+  assumptions: AdvisorPayload;
+  result: AdvisorResponse;
+  created_at: string;
+};
+
 type AdvisorForm = {
   target_sell_price_usd: string;
   desired_margin_usd: string;
@@ -100,6 +108,9 @@ export default function SearchPage() {
   const [advisorLoading, setAdvisorLoading] = useState(false);
   const [advisorError, setAdvisorError] = useState("");
   const [advisorResult, setAdvisorResult] = useState<AdvisorResponse | null>(null);
+  const [reportSaving, setReportSaving] = useState(false);
+  const [reportError, setReportError] = useState("");
+  const [savedReport, setSavedReport] = useState<AdvisorReportResponse | null>(null);
 
   const advisorScenarioMap = useMemo(() => {
     if (!advisorResult) return new Map<string, number>();
@@ -112,6 +123,8 @@ export default function SearchPage() {
     setError("");
     setSearch(null);
     setVehicle(null);
+    setSavedReport(null);
+    setReportError("");
 
     try {
       const normalizedVin = vin.trim().toUpperCase();
@@ -141,6 +154,8 @@ export default function SearchPage() {
     setAdvisorLoading(true);
     setAdvisorError("");
     setAdvisorResult(null);
+    setSavedReport(null);
+    setReportError("");
 
     const payload = toPayload(advisorForm);
     if (!Number.isFinite(payload.target_sell_price_usd) || payload.target_sell_price_usd <= 0) {
@@ -174,6 +189,49 @@ export default function SearchPage() {
       setAdvisorError(err instanceof Error ? err.message : "Advisor request failed");
     } finally {
       setAdvisorLoading(false);
+    }
+  }
+
+  async function onSaveReport() {
+    setReportSaving(true);
+    setReportError("");
+    setSavedReport(null);
+
+    const normalizedVin = vin.trim().toUpperCase();
+    if (normalizedVin.length !== 17) {
+      setReportSaving(false);
+      setReportError("VIN must contain 17 characters before saving report.");
+      return;
+    }
+
+    if (!advisorResult) {
+      setReportSaving(false);
+      setReportError("Run advisor calculation first.");
+      return;
+    }
+
+    try {
+      const assumptions = toPayload(advisorForm);
+      const response = await fetch(`${API_BASE}/api/v1/reports`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          vin: normalizedVin,
+          assumptions,
+          result: advisorResult
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to save report");
+      }
+
+      const json = (await response.json()) as AdvisorReportResponse;
+      setSavedReport(json);
+    } catch (err) {
+      setReportError(err instanceof Error ? err.message : "Save failed");
+    } finally {
+      setReportSaving(false);
     }
   }
 
@@ -388,6 +446,27 @@ export default function SearchPage() {
                 <h3>{toMoney(advisorScenarioMap.get("high") ?? 0)}</h3>
               </article>
             </div>
+
+            <div className="advisorActions">
+              <button type="button" disabled={reportSaving} onClick={onSaveReport}>
+                {reportSaving ? "Saving" : "Save Report"}
+              </button>
+            </div>
+
+            {reportError && (
+              <div className="errorPanel inlineError">
+                <p>{reportError}</p>
+              </div>
+            )}
+
+            {savedReport && (
+              <div className="panel reportSaved">
+                <p className="label">Saved Report</p>
+                <h3>Report ID: {savedReport.id}</h3>
+                <p>VIN: {savedReport.vin}</p>
+                <p>Created: {new Date(savedReport.created_at).toLocaleString()}</p>
+              </div>
+            )}
           </div>
         )}
       </section>

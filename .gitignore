@@ -8,6 +8,7 @@ Thumbs.db
 # Python
 __pycache__/
 *.pyc
+*.db
 .venv/
 
 # Node
