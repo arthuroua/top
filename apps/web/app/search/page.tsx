@@ -21,6 +21,17 @@ type VehicleResponse = {
     hammer_price_usd: number | null;
     status: string | null;
     location: string | null;
+    images: Array<{
+      image_url: string;
+      shot_order: number | null;
+      checksum: string | null;
+    }>;
+    price_events: Array<{
+      event_type: string;
+      old_value: string | null;
+      new_value: string;
+      event_time: string;
+    }>;
   }>;
 };
 
@@ -306,6 +317,35 @@ export default function SearchPage() {
                 <p>Price: {toMoney(lot.hammer_price_usd)}</p>
                 <p>Status: {lot.status || "-"}</p>
                 <p>Location: {lot.location || "-"}</p>
+
+                {lot.images.length > 0 && (
+                  <div className="subBlock">
+                    <p className="label">Images</p>
+                    <ul className="miniList">
+                      {lot.images.slice(0, 5).map((image) => (
+                        <li key={image.image_url}>
+                          <a href={image.image_url} target="_blank" rel="noreferrer">
+                            {image.shot_order ? `Shot ${image.shot_order}` : "Image"} - open
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {lot.price_events.length > 0 && (
+                  <div className="subBlock">
+                    <p className="label">Price Timeline</p>
+                    <ul className="miniList">
+                      {lot.price_events.slice(0, 5).map((event, idx) => (
+                        <li key={`${event.event_type}-${event.event_time}-${idx}`}>
+                          {event.event_type}: {event.old_value ? `${event.old_value} -> ` : ""}{event.new_value} (
+                          {new Date(event.event_time).toLocaleString()})
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </article>
             ))}
           </div>

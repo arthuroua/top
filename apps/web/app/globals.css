@@ -273,6 +273,32 @@ button:disabled {
   font-size: 0.95rem;
 }
 
+.subBlock {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px dashed #cbd7dc;
+}
+
+.miniList {
+  margin: 6px 0 0;
+  padding-left: 18px;
+}
+
+.miniList li {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.miniList a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.miniList a:hover {
+  text-decoration: underline;
+}
+
 @media (max-width: 860px) {
   .stats {
     grid-template-columns: 1fr;

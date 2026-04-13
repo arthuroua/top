@@ -9,6 +9,19 @@ class SearchResult(BaseModel):
     latest_status: str
 
 
+class LotImageItem(BaseModel):
+    image_url: str
+    shot_order: int | None = None
+    checksum: str | None = None
+
+
+class PriceEventItem(BaseModel):
+    event_type: str
+    old_value: str | None = None
+    new_value: str
+    event_time: str
+
+
 class LotItem(BaseModel):
     source: str
     lot_number: str
@@ -16,6 +29,8 @@ class LotItem(BaseModel):
     hammer_price_usd: int | None = None
     status: str | None = None
     location: str | None = None
+    images: list[LotImageItem] = Field(default_factory=list)
+    price_events: list[PriceEventItem] = Field(default_factory=list)
 
 
 class VehicleCard(BaseModel):
