@@ -7,7 +7,7 @@ This repository contains the first working skeleton for a service focused on imp
 - `apps/api`: FastAPI backend with core MVP endpoints
 - `apps/web`: Next.js frontend with VIN search page
 - `docs/outreach`: ready email templates for Copart and IAA data-access requests
-- `docker-compose.yml`: local stack with API, web, PostgreSQL, and Redis
+- `docker-compose.yml`: local stack with API, web, PostgreSQL, Redis, and ingestion worker
 
 ## MVP API routes
 
@@ -18,6 +18,12 @@ This repository contains the first working skeleton for a service focused on imp
 - `POST /api/v1/reports`
 - `GET /api/v1/reports/{id}`
 - `GET /api/v1/reports/{id}/pdf`
+
+### Ingestion skeleton routes
+
+- `POST /api/v1/ingestion/jobs`
+- `GET /api/v1/ingestion/queue-depth`
+- `POST /api/v1/ingestion/process-one`
 
 ## Quick start (Docker)
 
@@ -38,8 +44,42 @@ docker compose up --build
 - Web: `http://localhost:3000`
 - API docs: `http://localhost:8000/docs`
 
+## Quick ingestion demo
+
+1. Enqueue a job:
+
+```bash
+curl -X POST http://localhost:8000/api/v1/ingestion/jobs \
+  -H "Content-Type: application/json" \
+  -d '{
+    "source": "Copart",
+    "vin": "1HGCM82633A004352",
+    "lot_number": "12345678",
+    "sale_date": "2026-04-12",
+    "hammer_price_usd": 5200,
+    "status": "Sold",
+    "location": "CA - Los Angeles",
+    "images": ["https://img.example/1.jpg"],
+    "price_events": [
+      {
+        "event_type": "sold_price",
+        "old_value": "5000",
+        "new_value": "5200",
+        "event_time": "2026-04-12T10:00:00Z"
+      }
+    ]
+  }'
+```
+
+2. Process one queued job via API (dev mode):
+
+```bash
+curl -X POST http://localhost:8000/api/v1/ingestion/process-one
+```
+
 ## Notes
 
 - This skeleton uses mock vehicle/lot data to unblock product and UI development.
 - Advisor reports are persisted in `advisor_reports` and linked to VIN.
+- Ingestion worker writes to `vehicles`, `lots`, `lot_images`, and `price_events` tables.
 - Real data ingestion should be connected only through licensed Copart/IAA channels.

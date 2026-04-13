@@ -1,4 +1,4 @@
-﻿from datetime import datetime
+﻿from datetime import date, datetime
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -63,3 +63,42 @@ class AdvisorReportRead(BaseModel):
     assumptions: AdvisorInput
     result: AdvisorOutput
     created_at: datetime
+
+
+class IngestionPriceEvent(BaseModel):
+    event_type: str = Field(min_length=1, max_length=64)
+    old_value: str | None = Field(default=None, max_length=128)
+    new_value: str = Field(min_length=1, max_length=128)
+    event_time: datetime
+
+
+class IngestionJobPayload(BaseModel):
+    source: str = Field(min_length=1, max_length=16)
+    vin: str = Field(min_length=17, max_length=17)
+    lot_number: str = Field(min_length=1, max_length=32)
+    sale_date: date | None = None
+    hammer_price_usd: int | None = Field(default=None, ge=0)
+    status: str | None = Field(default=None, max_length=32)
+    location: str | None = Field(default=None, max_length=128)
+    images: list[str] = Field(default_factory=list)
+    price_events: list[IngestionPriceEvent] = Field(default_factory=list)
+
+
+class IngestionEnqueueResponse(BaseModel):
+    accepted: bool
+    queue_depth: int
+
+
+class IngestionQueueDepth(BaseModel):
+    queue_depth: int
+
+
+class IngestionProcessResult(BaseModel):
+    processed: bool
+    message: str
+    lot_id: str | None = None
+    vin: str | None = None
+    source: str | None = None
+    lot_number: str | None = None
+    images_upserted: int = 0
+    price_events_added: int = 0

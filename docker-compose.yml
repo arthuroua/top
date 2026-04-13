@@ -27,8 +27,24 @@
     environment:
       API_PORT: ${API_PORT}
       DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
+      INGESTION_QUEUE_KEY: ${INGESTION_QUEUE_KEY}
     ports:
       - "${API_PORT}:8000"
+    depends_on:
+      - db
+      - redis
+
+  ingestion-worker:
+    build:
+      context: ./apps/api
+    container_name: carimport-ingestion-worker
+    restart: unless-stopped
+    command: ["python", "-m", "app.workers.ingestion_worker"]
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
+      INGESTION_QUEUE_KEY: ${INGESTION_QUEUE_KEY}
     depends_on:
       - db
       - redis
