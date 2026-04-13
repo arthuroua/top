@@ -465,6 +465,16 @@ export default function SearchPage() {
                 <h3>Report ID: {savedReport.id}</h3>
                 <p>VIN: {savedReport.vin}</p>
                 <p>Created: {new Date(savedReport.created_at).toLocaleString()}</p>
+                <div className="advisorActions">
+                  <a
+                    className="button"
+                    href={`${API_BASE}/api/v1/reports/${savedReport.id}/pdf`}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Download PDF
+                  </a>
+                </div>
               </div>
             )}
           </div>

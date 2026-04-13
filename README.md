@@ -17,6 +17,7 @@ This repository contains the first working skeleton for a service focused on imp
 - `POST /api/v1/advisor/calculate`
 - `POST /api/v1/reports`
 - `GET /api/v1/reports/{id}`
+- `GET /api/v1/reports/{id}/pdf`
 
 ## Quick start (Docker)
 
