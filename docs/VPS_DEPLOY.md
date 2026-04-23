@@ -83,7 +83,33 @@ curl -I https://example.com
 curl https://api.example.com/health
 ```
 
-## 8. Internal security model
+## 8. Database backup and restore
+
+Make the helper scripts executable:
+
+```bash
+chmod +x deploy/scripts/backup-postgres.sh deploy/scripts/restore-postgres.sh
+```
+
+Create a manual backup:
+
+```bash
+./deploy/scripts/backup-postgres.sh
+```
+
+Restore from a backup:
+
+```bash
+./deploy/scripts/restore-postgres.sh /absolute/path/to/backup.sql.gz
+```
+
+Example daily cron at 03:40:
+
+```bash
+40 3 * * * cd /root/top && ./deploy/scripts/backup-postgres.sh >> /var/log/carimport-backup.log 2>&1
+```
+
+## 9. Internal security model
 
 - Only `nginx` exposes ports `80/443`
 - `web` and `api` are internal services behind reverse proxy
@@ -91,7 +117,7 @@ curl https://api.example.com/health
 - `/admin/` is behind Basic Auth
 - dangerous ingestion routes are behind Basic Auth and app-level `X-Admin-Token`
 
-## 9. Recommended next hardening
+## 10. Recommended next hardening
 
 - Add daily Postgres backup cron
 - Add fail2ban or provider firewall rules
