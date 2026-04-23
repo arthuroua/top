@@ -77,7 +77,8 @@ docker compose up --build
 
 ## Production deploy
 
-See [`docs/DEPLOY.md`](docs/DEPLOY.md).
+- General production notes: [`docs/DEPLOY.md`](docs/DEPLOY.md)
+- VPS deployment stack: [`docs/VPS_DEPLOY.md`](docs/VPS_DEPLOY.md)
 
 ## Database migrations
 

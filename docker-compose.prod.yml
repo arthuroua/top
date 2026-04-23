@@ -1,0 +1,138 @@
+services:
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: carimport-nginx
+    restart: unless-stopped
+    depends_on:
+      - web
+      - api
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./deploy/nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./deploy/certs:/etc/letsencrypt
+      - ./deploy/www:/var/www/certbot
+      - ./deploy/nginx/.htpasswd:/etc/nginx/.htpasswd:ro
+    networks:
+      - edge
+      - internal
+
+  db:
+    image: postgres:16
+    container_name: carimport-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+    networks:
+      - internal
+
+  redis:
+    image: redis:7-alpine
+    container_name: carimport-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--save", "60", "1000"]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+    networks:
+      - internal
+
+  api:
+    build:
+      context: ./apps/api
+    container_name: carimport-api
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    env_file:
+      - .env.production
+    environment:
+      PORT: 8000
+    expose:
+      - "8000"
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=5)\""]
+      interval: 20s
+      timeout: 6s
+      retries: 10
+    networks:
+      - internal
+
+  ingestion-worker:
+    build:
+      context: ./apps/api
+    container_name: carimport-ingestion-worker
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    env_file:
+      - .env.production
+    command: ["python", "-m", "app.workers.ingestion_worker"]
+    networks:
+      - internal
+
+  copart-csv-scheduler:
+    build:
+      context: ./apps/api
+    container_name: carimport-copart-csv-scheduler
+    restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_healthy
+    env_file:
+      - .env.production
+    command: ["python", "-m", "app.workers.copart_csv_scheduler"]
+    networks:
+      - internal
+
+  web:
+    build:
+      context: ./apps/web
+    container_name: carimport-web
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    env_file:
+      - .env.production
+    environment:
+      PORT: 3000
+    expose:
+      - "3000"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/ >/dev/null"]
+      interval: 20s
+      timeout: 6s
+      retries: 10
+    networks:
+      - internal
+
+volumes:
+  db_data:
+  redis_data:
+
+networks:
+  edge:
+  internal:
+    internal: true
