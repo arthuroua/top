@@ -1,6 +1,7 @@
 FROM python:3.12-slim
 
 WORKDIR /app
+ENV PORT=8000
 
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
@@ -14,4 +15,4 @@ RUN chmod +x ./scripts/docker-entrypoint.sh ./scripts/create-migration.sh
 EXPOSE 8000
 
 ENTRYPOINT ["./scripts/docker-entrypoint.sh"]
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]

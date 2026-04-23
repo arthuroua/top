@@ -8,6 +8,7 @@ This repository contains the first working skeleton for a service focused on imp
 - `apps/web`: Next.js frontend with VIN search page
 - `docs/outreach`: ready email templates for Copart and IAA data-access requests
 - `docker-compose.yml`: local stack with API, web, PostgreSQL, Redis, and ingestion worker
+- `docs/DEPLOY.md`: deployment guide for production setup
 
 ## MVP API routes
 
@@ -73,6 +74,10 @@ docker compose up --build
 
 - Web: `http://localhost:3000`
 - API docs: `http://localhost:8000/docs`
+
+## Production deploy
+
+See [`docs/DEPLOY.md`](docs/DEPLOY.md).
 
 ## Database migrations
 
