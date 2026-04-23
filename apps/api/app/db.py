@@ -10,6 +10,19 @@ from sqlalchemy.orm import Session, declarative_base, sessionmaker
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./carimport.db")
 ALEMBIC_REVISION_HEAD = "20260423_000002"
 
+
+def _normalize_database_url(url: str) -> str:
+    # Railway/Postgres URLs often omit the SQLAlchemy driver. We explicitly
+    # target psycopg3 because the container installs `psycopg[binary]`.
+    if url.startswith("postgresql://"):
+        return url.replace("postgresql://", "postgresql+psycopg://", 1)
+    if url.startswith("postgres://"):
+        return url.replace("postgres://", "postgresql+psycopg://", 1)
+    return url
+
+
+DATABASE_URL = _normalize_database_url(DATABASE_URL)
+
 connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
 
 engine = create_engine(DATABASE_URL, pool_pre_ping=True, connect_args=connect_args)
