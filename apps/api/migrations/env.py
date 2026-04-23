@@ -7,7 +7,7 @@ from pathlib import Path
 from alembic import context
 from sqlalchemy import engine_from_config, pool
 
-from app.db import Base
+from app.db import Base, DATABASE_URL
 from app import models  # noqa: F401
 
 config = context.config
@@ -19,7 +19,7 @@ target_metadata = Base.metadata
 
 database_url = os.getenv("DATABASE_URL")
 if database_url:
-    config.set_main_option("sqlalchemy.url", database_url)
+    config.set_main_option("sqlalchemy.url", DATABASE_URL)
 
 
 def run_migrations_offline() -> None:
