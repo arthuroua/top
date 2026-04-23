@@ -1,0 +1,9 @@
+__pycache__
+*.pyc
+.venv
+*.db
+*.log
+*.err
+*.out
+migrations/__pycache__
+app/__pycache__

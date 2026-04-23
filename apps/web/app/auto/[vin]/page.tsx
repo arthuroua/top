@@ -246,6 +246,7 @@ export default async function AutoSeoPage({ params }: PageProps) {
   const lots = vehicle.lots || [];
   const images = collectImages(lots);
   const latestLot = lots[0];
+  const latestLotImages = latestLot ? collectImages([latestLot]).slice(0, 6) : [];
   const relatedClusterHref =
     vehicle.make && vehicle.model && vehicle.year
       ? `/cars/${slugify(vehicle.make)}/${slugify(vehicle.model)}/${vehicle.year}`
@@ -253,6 +254,8 @@ export default async function AutoSeoPage({ params }: PageProps) {
   const averagePrice = lots.filter((lot) => lot.hammer_price_usd !== null).reduce((sum, lot, _, array) => {
     return sum + (lot.hammer_price_usd || 0) / array.length;
   }, 0);
+  const lowerBound = market?.summary.p25_hammer_price_usd ?? null;
+  const medianPrice = market?.summary.median_hammer_price_usd ?? null;
   const riskAssessment = assessVehicleRisk(vehicle, latestLot || null);
   const riskText = riskAssessment
     ? {
@@ -358,6 +361,100 @@ export default async function AutoSeoPage({ params }: PageProps) {
       </article>
 
       <section className="panel autoSeoSection">
+        <div className="autoJumpNav">
+          <a href="#vin-overview">{dict.auto.knowTitle}</a>
+          <a href="#vin-market">{dict.auto.marketTitle}</a>
+          <a href="#vin-specs">{dict.auto.decoderTitle}</a>
+          <a href="#vin-lots">{dict.auto.lotsTitle}</a>
+          <a href="#vin-history">{dict.auto.updateLogTitle}</a>
+          <a href="#vin-profit">{dict.auto.openCalculator}</a>
+        </div>
+        <div className="autoSeoQuickFacts">
+          <div>
+            <p className="label">VIN</p>
+            <strong>{vin}</strong>
+          </div>
+          <div>
+            <p className="label">{dict.search.finalBid}</p>
+            <strong>{toMoney(latestLot?.hammer_price_usd)}</strong>
+          </div>
+          <div>
+            <p className="label">{dict.search.market.lowerBound}</p>
+            <strong>{toMoney(lowerBound)}</strong>
+          </div>
+          <div>
+            <p className="label">{dict.search.market.median}</p>
+            <strong>{toMoney(medianPrice)}</strong>
+          </div>
+          <div>
+            <p className="label">{dict.search.kpiStatus}</p>
+            <strong>{latestLot?.status || "-"}</strong>
+          </div>
+          <div>
+            <p className="label">{dict.search.location}</p>
+            <strong>{latestLot?.location || "-"}</strong>
+          </div>
+        </div>
+      </section>
+
+      {latestLot && (
+        <section className="panel lotSpotlight" id="vin-overview">
+          <div className="sectionHead">
+            <div>
+              <h2>{dict.auto.knowTitle}</h2>
+              <p className="muted">Latest lot spotlight with the fastest way to judge whether the car still makes sense.</p>
+            </div>
+          </div>
+          <div className="lotSpotlightGrid">
+            <div className="lotSpotlightGallery">
+              {latestLotImages.length > 0 ? (
+                <>
+                  <a href={latestLotImages[0]} target="_blank" rel="noreferrer" className="mainPhotoLink">
+                    <img src={latestLotImages[0]} alt={`${vehicleName} latest lot main`} className="mainPhoto" />
+                  </a>
+                  {latestLotImages.length > 1 && (
+                    <div className="thumbGrid">
+                      {latestLotImages.slice(1).map((url, imageIndex) => (
+                        <a key={`${url}-${imageIndex}`} href={url} target="_blank" rel="noreferrer" className="thumbLink">
+                          <img src={url} alt={`${vehicleName} latest lot ${imageIndex + 2}`} className="thumbPhoto" loading="lazy" />
+                        </a>
+                      ))}
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="spotlightEmpty">
+                  <p>{dict.search.noPhotos}</p>
+                </div>
+              )}
+            </div>
+            <div className="lotSpotlightFacts">
+              <div className="spotlightFactCard">
+                <p className="label">{dict.search.source}</p>
+                <h3>{latestLot.source}</h3>
+                <p>#{latestLot.lot_number}</p>
+              </div>
+              <div className="spotlightFactCard">
+                <p className="label">{dict.search.saleDate}</p>
+                <h3>{latestLot.sale_date || "-"}</h3>
+                <p>{dict.search.location}: {latestLot.location || "-"}</p>
+              </div>
+              <div className="spotlightFactCard">
+                <p className="label">{dict.search.finalBid}</p>
+                <h3>{toMoney(latestLot.hammer_price_usd)}</h3>
+                <p>{dict.search.market.lowerBound}: {toMoney(lowerBound)}</p>
+              </div>
+              <div className="spotlightFactCard">
+                <p className="label">{dict.search.kpiStatus}</p>
+                <h3>{latestLot.status || "-"}</h3>
+                <p>{dict.auto.images}: {latestLotImages.length}</p>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
+      <section className="panel autoSeoSection">
         <h2>{dict.auto.knowTitle}</h2>
         <p>{latestLot ? `${latestLot.source} #${latestLot.lot_number}` : "-"}</p>
         <p>
@@ -400,7 +497,7 @@ export default async function AutoSeoPage({ params }: PageProps) {
       )}
 
       {market && market.summary.count > 0 && (
-        <section className="panel marketPanel">
+        <section className="panel marketPanel" id="vin-market">
           <div className="sectionHead">
             <div>
               <h2>{dict.auto.marketTitle}</h2>
@@ -441,7 +538,7 @@ export default async function AutoSeoPage({ params }: PageProps) {
       )}
 
       {decoded && (
-        <section className="panel decoderPanel">
+        <section className="panel decoderPanel" id="vin-specs">
           <div className="sectionHead">
             <div>
               <h2>{dict.auto.decoderTitle}</h2>
@@ -477,7 +574,7 @@ export default async function AutoSeoPage({ params }: PageProps) {
         </section>
       )}
 
-      <section className="panel autoSeoSection">
+      <section className="panel autoSeoSection" id="vin-lots">
         <h2>{dict.auto.lotsTitle}</h2>
         {lots.length === 0 ? (
           <p>No lots found for this VIN.</p>
@@ -520,7 +617,7 @@ export default async function AutoSeoPage({ params }: PageProps) {
         )}
       </section>
 
-      <section className="panel autoSeoSection">
+      <section className="panel autoSeoSection" id="vin-history">
         <h2>{dict.auto.updateLogTitle}</h2>
         {history.items.length > 0 ? (
           <div className="autoSeoHistory">
@@ -540,7 +637,7 @@ export default async function AutoSeoPage({ params }: PageProps) {
         )}
       </section>
 
-      <section className="panel autoSeoSection">
+      <section className="panel autoSeoSection" id="vin-profit">
         <h2>{dict.auto.practicalTitle}</h2>
         <p>
           Do not evaluate the vehicle only by auction price. The real decision starts after logistics, customs, repair,
