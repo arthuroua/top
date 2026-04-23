@@ -2,9 +2,11 @@
 import hashlib
 import io
 import json
+import os
+import secrets
 import time
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
 from fastapi.responses import Response
 from redis.exceptions import RedisError
 from sqlalchemy.orm import Session
@@ -30,6 +32,21 @@ from app.services.connectors import connector_statuses, fetch_from_connector
 from app.services.ingestion_queue import enqueue_ingestion_job, pop_ingestion_job, queue_depth
 
 router = APIRouter(prefix="/api/v1/ingestion", tags=["ingestion"])
+
+
+def _admin_token() -> str:
+    value = os.getenv("ADMIN_TOKEN", "").strip()
+    if not value or value == "change-me-admin":
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Admin token is not configured",
+        )
+    return value
+
+
+def _require_admin(x_admin_token: str | None = Header(default=None)) -> None:
+    if not x_admin_token or not secrets.compare_digest(x_admin_token, _admin_token()):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid admin token")
 
 
 def _hash_payload(payload: dict) -> str:
@@ -134,7 +151,7 @@ def _normalize_runs_filters(
     return provider_filter, success_filter, query_text
 
 
-@router.post("/jobs", response_model=IngestionEnqueueResponse)
+@router.post("/jobs", response_model=IngestionEnqueueResponse, dependencies=[Depends(_require_admin)])
 def enqueue_job(payload: IngestionJobPayload) -> IngestionEnqueueResponse:
     try:
         depth = enqueue_ingestion_job(payload)
@@ -234,7 +251,7 @@ def get_import_history(
     )
 
 
-@router.get("/runs/export.csv")
+@router.get("/runs/export.csv", dependencies=[Depends(_require_admin)])
 def export_runs_csv(
     provider: str | None = Query(default=None),
     failed_only: bool = Query(default=False),
@@ -318,7 +335,7 @@ def export_runs_csv(
     )
 
 
-@router.post("/fetch-and-enqueue", response_model=IngestionConnectorFetchResponse)
+@router.post("/fetch-and-enqueue", response_model=IngestionConnectorFetchResponse, dependencies=[Depends(_require_admin)])
 def fetch_and_enqueue(
     payload: IngestionConnectorFetchRequest,
     db: Session = Depends(get_db),
@@ -455,7 +472,7 @@ def get_queue_depth() -> IngestionQueueDepth:
     return IngestionQueueDepth(queue_depth=depth)
 
 
-@router.post("/process-one", response_model=IngestionProcessResult)
+@router.post("/process-one", response_model=IngestionProcessResult, dependencies=[Depends(_require_admin)])
 def process_one(db: Session = Depends(get_db)) -> IngestionProcessResult:
     try:
         job = pop_ingestion_job(timeout=1)

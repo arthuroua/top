@@ -1,4 +1,5 @@
 import os
+import secrets
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Response, status
 from sqlalchemy.orm import Session
@@ -19,11 +20,17 @@ router = APIRouter(prefix="/api/v1/seo-pages", tags=["seo-pages"])
 
 
 def _admin_token() -> str:
-    return os.getenv("ADMIN_TOKEN", "change-me-admin")
+    value = os.getenv("ADMIN_TOKEN", "").strip()
+    if not value or value == "change-me-admin":
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Admin token is not configured",
+        )
+    return value
 
 
 def _require_admin(x_admin_token: str | None = Header(default=None)) -> None:
-    if x_admin_token != _admin_token():
+    if not x_admin_token or not secrets.compare_digest(x_admin_token, _admin_token()):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid admin token")
 
 
