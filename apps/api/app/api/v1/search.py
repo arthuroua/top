@@ -1,29 +1,191 @@
+import re
+from urllib.parse import parse_qs, unquote, urlparse
+
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.core.privacy import hide_data_source
 from app.data.mock_data import MOCK_VEHICLES
 from app.db import get_db
 from app.models import Lot, Vehicle
-from app.schemas import SearchResult
+from app.schemas import SearchResolveResult, SearchResult
 
 router = APIRouter(prefix="/api/v1", tags=["search"])
+
+VIN_TOKEN_RE = re.compile(r"[A-HJ-NPR-Z0-9]{17}", re.IGNORECASE)
+LOT_STOPWORDS = {
+    "COPART",
+    "IAAI",
+    "LOT",
+    "DETAILS",
+    "DETAIL",
+    "VEHICLE",
+    "AUCTION",
+    "EN",
+    "US",
+    "AUTO",
+}
+LOT_PARAM_KEYS = {"lot", "lot_number", "lotnumber", "lot_num", "lotid", "lot_id"}
+VIN_PARAM_KEYS = {"vin", "vehicle_vin", "vehiclevin"}
+
+
+def _extract_source_hint(hostname: str) -> str | None:
+    host = hostname.lower()
+    if "copart" in host:
+        return "copart"
+    if "iaai" in host or "impactauto" in host:
+        return "iaai"
+    return None
+
+
+def _normalize_lot_token(value: str) -> str | None:
+    token = value.strip().upper()
+    if not token or token in LOT_STOPWORDS:
+        return None
+    if len(token) < 6 or len(token) > 12:
+        return None
+    if not token.isalnum():
+        return None
+    if not any(char.isdigit() for char in token):
+        return None
+    return token
+
+
+def _extract_query_payload(query: str) -> tuple[str, str, str, str | None, str | None]:
+    raw = query.strip()
+    if not raw:
+        raise HTTPException(status_code=400, detail="Provide VIN, lot number, or URL")
+
+    parsed = urlparse(raw)
+    if parsed.scheme and parsed.netloc:
+        source_hint = _extract_source_hint(parsed.netloc)
+        query_params = parse_qs(parsed.query)
+
+        for key in VIN_PARAM_KEYS:
+            values = query_params.get(key)
+            if not values:
+                continue
+            candidate = values[0].strip().upper()
+            if len(candidate) == 17 and VIN_TOKEN_RE.fullmatch(candidate):
+                return ("url", "vin", candidate, source_hint, None)
+
+        for key in LOT_PARAM_KEYS:
+            values = query_params.get(key)
+            if not values:
+                continue
+            normalized_lot = _normalize_lot_token(values[0])
+            if normalized_lot:
+                return ("url", "lot", normalized_lot, source_hint, normalized_lot)
+
+        token_bag = re.split(r"[^A-Z0-9]+", unquote(f"{parsed.path} {parsed.query}").upper())
+        for token in token_bag:
+            if len(token) == 17 and VIN_TOKEN_RE.fullmatch(token):
+                return ("url", "vin", token, source_hint, None)
+
+        for token in token_bag:
+            normalized_lot = _normalize_lot_token(token)
+            if normalized_lot:
+                return ("url", "lot", normalized_lot, source_hint, normalized_lot)
+
+        raise HTTPException(status_code=400, detail="Could not extract VIN or lot number from URL")
+
+    normalized = raw.upper()
+    if len(normalized) == 17 and VIN_TOKEN_RE.fullmatch(normalized):
+        return ("vin", "vin", normalized, None, None)
+
+    normalized_lot = _normalize_lot_token(normalized)
+    if normalized_lot:
+        return ("lot", "lot", normalized_lot, None, normalized_lot)
+
+    raise HTTPException(status_code=400, detail="Provide valid VIN, lot number, or URL")
+
+
+def _search_vin_in_db(db: Session, vin_key: str) -> SearchResult | None:
+    vehicle = db.get(Vehicle, vin_key)
+    if vehicle is None:
+        return None
+    lots = db.execute(select(Lot).where(Lot.vin == vin_key).order_by(Lot.sale_date.desc(), Lot.fetched_at.desc())).scalars().all()
+    latest_status = lots[0].status if lots and lots[0].status else "Unknown"
+    return SearchResult(vin=vin_key, lots_found=len(lots), latest_status=latest_status)
+
+
+def _search_vin_in_mock(vin_key: str) -> SearchResult | None:
+    fallback_vehicle = MOCK_VEHICLES.get(vin_key)
+    if not fallback_vehicle:
+        return None
+    fallback_lots = fallback_vehicle.get("lots", [])
+    latest_status = fallback_lots[0]["status"] if fallback_lots else "Unknown"
+    return SearchResult(vin=vin_key, lots_found=len(fallback_lots), latest_status=latest_status)
+
+
+def _find_vin_by_lot_in_db(db: Session, lot_number: str, source_hint: str | None) -> tuple[str, str | None] | None:
+    query = select(Lot).where(func.upper(Lot.lot_number) == lot_number)
+    if source_hint:
+        query = query.where(func.lower(Lot.source) == source_hint)
+    query = query.order_by(Lot.sale_date.desc(), Lot.fetched_at.desc())
+    lot = db.execute(query).scalars().first()
+    if lot is None:
+        return None
+    return (lot.vin, lot.source.lower())
+
+
+def _find_vin_by_lot_in_mock(lot_number: str, source_hint: str | None) -> tuple[str, str | None] | None:
+    lot_key = lot_number.upper()
+    for vin, vehicle in MOCK_VEHICLES.items():
+        for lot in vehicle.get("lots", []):
+            source_value = str(lot.get("source") or "").lower()
+            if source_hint and source_value != source_hint:
+                continue
+            if str(lot.get("lot_number") or "").upper() == lot_key:
+                return (vin, source_value or None)
+    return None
 
 
 @router.get("/search", response_model=SearchResult)
 def search(vin: str = Query(min_length=17, max_length=17), db: Session = Depends(get_db)) -> SearchResult:
     vin_key = vin.upper()
 
-    vehicle = db.get(Vehicle, vin_key)
-    if vehicle is not None:
-        lots = db.execute(select(Lot).where(Lot.vin == vin_key).order_by(Lot.sale_date.desc(), Lot.fetched_at.desc())).scalars().all()
-        latest_status = lots[0].status if lots and lots[0].status else "Unknown"
-        return SearchResult(vin=vin_key, lots_found=len(lots), latest_status=latest_status)
+    db_result = _search_vin_in_db(db, vin_key)
+    if db_result is not None:
+        return db_result
 
-    fallback_vehicle = MOCK_VEHICLES.get(vin_key)
-    if fallback_vehicle:
-        fallback_lots = fallback_vehicle.get("lots", [])
-        latest_status = fallback_lots[0]["status"] if fallback_lots else "Unknown"
-        return SearchResult(vin=vin_key, lots_found=len(fallback_lots), latest_status=latest_status)
+    mock_result = _search_vin_in_mock(vin_key)
+    if mock_result is not None:
+        return mock_result
 
     raise HTTPException(status_code=404, detail="VIN not found")
+
+
+@router.get("/search/resolve", response_model=SearchResolveResult)
+def resolve_search(query: str = Query(min_length=1, max_length=1024), db: Session = Depends(get_db)) -> SearchResolveResult:
+    query_type, matched_by, normalized_query, source_hint, lot_number = _extract_query_payload(query)
+
+    vin_key: str | None = None
+    matched_source: str | None = source_hint
+    if matched_by == "vin":
+        vin_key = normalized_query
+    else:
+        lot_result = _find_vin_by_lot_in_db(db, normalized_query, source_hint)
+        if lot_result is None:
+            lot_result = _find_vin_by_lot_in_mock(normalized_query, source_hint)
+        if lot_result is None:
+            raise HTTPException(status_code=404, detail="Lot not found")
+        vin_key, matched_source = lot_result
+
+    db_result = _search_vin_in_db(db, vin_key)
+    result = db_result or _search_vin_in_mock(vin_key)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Vehicle not found")
+
+    return SearchResolveResult(
+        query=query,
+        normalized_query=normalized_query,
+        query_type=query_type,
+        matched_by=matched_by,
+        vin=result.vin,
+        lots_found=result.lots_found,
+        latest_status=result.latest_status,
+        lot_number=lot_number,
+        source=None if hide_data_source() else matched_source,
+    )

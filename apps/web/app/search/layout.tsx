@@ -1,0 +1,14 @@
+import type { Metadata } from "next";
+import type { ReactNode } from "react";
+
+export const metadata: Metadata = {
+  title: "Search Console",
+  robots: {
+    index: false,
+    follow: true
+  }
+};
+
+export default function SearchLayout({ children }: { children: ReactNode }) {
+  return <>{children}</>;
+}

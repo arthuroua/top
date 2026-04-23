@@ -1,13 +1,137 @@
-﻿from fastapi import APIRouter, Depends, HTTPException
+﻿import csv
+import hashlib
+import io
+import json
+import time
+
+from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import Response
 from redis.exceptions import RedisError
 from sqlalchemy.orm import Session
 
 from app.db import get_db
 from app.repositories.ingestion import apply_ingestion_job
-from app.schemas import IngestionEnqueueResponse, IngestionJobPayload, IngestionProcessResult, IngestionQueueDepth
+from app.repositories.ingestion_history import count_ingestion_snapshots, list_ingestion_snapshots
+from app.repositories.ingestion_runs import count_ingestion_runs, create_ingestion_run, list_ingestion_runs
+from app.schemas import (
+    IngestionConnectorFetchRequest,
+    IngestionConnectorFetchResponse,
+    IngestionConnectorRunRead,
+    IngestionConnectorRunsPage,
+    IngestionImportHistoryPage,
+    IngestionImportSnapshotRead,
+    IngestionConnectorStatus,
+    IngestionEnqueueResponse,
+    IngestionJobPayload,
+    IngestionProcessResult,
+    IngestionQueueDepth,
+)
+from app.services.connectors import connector_statuses, fetch_from_connector
 from app.services.ingestion_queue import enqueue_ingestion_job, pop_ingestion_job, queue_depth
 
 router = APIRouter(prefix="/api/v1/ingestion", tags=["ingestion"])
+
+
+def _hash_payload(payload: dict) -> str:
+    encoded = json.dumps(payload, sort_keys=True, separators=(",", ":"), default=str).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
+
+
+def _elapsed_ms(started_at: float) -> int:
+    return int((time.perf_counter() - started_at) * 1000)
+
+
+def _to_run_read_model(record) -> IngestionConnectorRunRead:
+    return IngestionConnectorRunRead(
+        id=record.id,
+        provider=record.provider,
+        mode=record.mode,
+        selector=record.selector_json,
+        request_hash=record.request_hash,
+        source_record_id=record.source_record_id,
+        response_hash=record.response_hash,
+        success=record.success,
+        error_message=record.error_message,
+        latency_ms=record.latency_ms,
+        enqueued=record.enqueued,
+        queue_depth=record.queue_depth,
+        job=record.job_json,
+        created_at=record.created_at,
+    )
+
+
+def _to_import_snapshot_read_model(record) -> IngestionImportSnapshotRead:
+    payload = record.payload_json or {}
+    return IngestionImportSnapshotRead(
+        id=record.id,
+        lot_id=record.lot_id,
+        source=record.source,
+        lot_number=record.lot_number,
+        vin=record.vin,
+        sale_date=record.sale_date,
+        hammer_price_usd=record.hammer_price_usd,
+        status=record.status,
+        location=record.location,
+        images=record.images_json or [],
+        price_events=record.price_events_json or [],
+        payload=payload,
+        imported_at=record.imported_at,
+    )
+
+
+def _write_failed_run(
+    db: Session,
+    *,
+    provider: str,
+    mode: str,
+    selector: dict[str, str | bool | None],
+    request_hash: str,
+    source_record_id: str | None,
+    response_hash: str | None,
+    error_message: str,
+    latency_ms: int,
+    enqueued: bool,
+    queue_depth_value: int | None,
+    job_json: dict | None,
+) -> None:
+    create_ingestion_run(
+        db,
+        provider=provider,
+        mode=mode,
+        selector=selector,
+        request_hash=request_hash,
+        source_record_id=source_record_id,
+        response_hash=response_hash,
+        success=False,
+        error_message=error_message,
+        latency_ms=latency_ms,
+        enqueued=enqueued,
+        queue_depth=queue_depth_value,
+        job_json=job_json,
+    )
+
+
+def _normalize_runs_filters(
+    *,
+    provider: str | None,
+    failed_only: bool,
+    q: str | None,
+    sort_by: str,
+    sort_order: str,
+) -> tuple[str | None, bool | None, str | None]:
+    provider_filter = provider.lower() if provider else None
+    if provider_filter is not None and provider_filter not in {"copart", "iaai"}:
+        raise HTTPException(status_code=400, detail="provider must be copart or iaai")
+    if sort_by not in {"created_at", "latency_ms"}:
+        raise HTTPException(status_code=400, detail="sort_by must be created_at or latency_ms")
+    if sort_order not in {"asc", "desc"}:
+        raise HTTPException(status_code=400, detail="sort_order must be asc or desc")
+
+    success_filter = False if failed_only else None
+    query_text = q.strip() if q else None
+    if query_text == "":
+        query_text = None
+    return provider_filter, success_filter, query_text
 
 
 @router.post("/jobs", response_model=IngestionEnqueueResponse)
@@ -18,6 +142,307 @@ def enqueue_job(payload: IngestionJobPayload) -> IngestionEnqueueResponse:
         raise HTTPException(status_code=503, detail=f"Queue unavailable: {exc}") from exc
 
     return IngestionEnqueueResponse(accepted=True, queue_depth=depth)
+
+
+@router.get("/connectors", response_model=list[IngestionConnectorStatus])
+def list_connectors() -> list[IngestionConnectorStatus]:
+    return connector_statuses()
+
+
+@router.get("/runs", response_model=IngestionConnectorRunsPage)
+def get_runs(
+    provider: str | None = Query(default=None),
+    failed_only: bool = Query(default=False),
+    q: str | None = Query(default=None),
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=200),
+    sort_by: str = Query(default="created_at"),
+    sort_order: str = Query(default="desc"),
+    db: Session = Depends(get_db),
+) -> IngestionConnectorRunsPage:
+    provider_filter, success_filter, query_text = _normalize_runs_filters(
+        provider=provider,
+        failed_only=failed_only,
+        q=q,
+        sort_by=sort_by,
+        sort_order=sort_order,
+    )
+
+    total_count = count_ingestion_runs(
+        db,
+        provider=provider_filter,
+        success=success_filter,
+        query_text=query_text,
+    )
+    offset = (page - 1) * page_size
+    runs = list_ingestion_runs(
+        db,
+        provider=provider_filter,
+        success=success_filter,
+        query_text=query_text,
+        limit=page_size,
+        offset=offset,
+        sort_by=sort_by,
+        sort_order=sort_order,
+    )
+    items = [_to_run_read_model(run) for run in runs]
+    has_next = offset + len(items) < total_count
+    return IngestionConnectorRunsPage(
+        items=items,
+        total_count=total_count,
+        page=page,
+        page_size=page_size,
+        has_next=has_next,
+    )
+
+
+@router.get("/history", response_model=IngestionImportHistoryPage)
+def get_import_history(
+    vin: str | None = Query(default=None, min_length=17, max_length=17),
+    lot_number: str | None = Query(default=None, min_length=1, max_length=32),
+    source: str | None = Query(default=None, min_length=1, max_length=16),
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=50, ge=1, le=500),
+    db: Session = Depends(get_db),
+) -> IngestionImportHistoryPage:
+    normalized_vin = vin.strip().upper() if vin else None
+    normalized_lot = lot_number.strip().upper() if lot_number else None
+    normalized_source = source.strip() if source else None
+
+    total_count = count_ingestion_snapshots(
+        db,
+        vin=normalized_vin,
+        lot_number=normalized_lot,
+        source=normalized_source,
+    )
+    snapshots = list_ingestion_snapshots(
+        db,
+        vin=normalized_vin,
+        lot_number=normalized_lot,
+        source=normalized_source,
+        page=page,
+        page_size=page_size,
+    )
+    items = [_to_import_snapshot_read_model(item) for item in snapshots]
+    has_next = (page * page_size) < total_count
+    return IngestionImportHistoryPage(
+        items=items,
+        total_count=total_count,
+        page=page,
+        page_size=page_size,
+        has_next=has_next,
+    )
+
+
+@router.get("/runs/export.csv")
+def export_runs_csv(
+    provider: str | None = Query(default=None),
+    failed_only: bool = Query(default=False),
+    q: str | None = Query(default=None),
+    sort_by: str = Query(default="created_at"),
+    sort_order: str = Query(default="desc"),
+    max_rows: int = Query(default=5000, ge=1, le=20000),
+    db: Session = Depends(get_db),
+) -> Response:
+    provider_filter, success_filter, query_text = _normalize_runs_filters(
+        provider=provider,
+        failed_only=failed_only,
+        q=q,
+        sort_by=sort_by,
+        sort_order=sort_order,
+    )
+
+    runs = list_ingestion_runs(
+        db,
+        provider=provider_filter,
+        success=success_filter,
+        query_text=query_text,
+        limit=max_rows,
+        offset=0,
+        sort_by=sort_by,
+        sort_order=sort_order,
+    )
+
+    buffer = io.StringIO()
+    writer = csv.writer(buffer)
+    writer.writerow(
+        [
+            "run_id",
+            "created_at",
+            "provider",
+            "mode",
+            "success",
+            "error_message",
+            "latency_ms",
+            "enqueued",
+            "queue_depth",
+            "vin",
+            "lot_number",
+            "source_record_id",
+            "request_hash",
+            "response_hash",
+            "selector_provider",
+            "selector_enqueue",
+        ]
+    )
+
+    for run in runs:
+        selector = run.selector_json or {}
+        job = run.job_json or {}
+        writer.writerow(
+            [
+                run.id,
+                run.created_at.isoformat() if run.created_at else "",
+                run.provider,
+                run.mode,
+                str(run.success),
+                run.error_message or "",
+                run.latency_ms,
+                str(run.enqueued),
+                run.queue_depth if run.queue_depth is not None else "",
+                job.get("vin") or selector.get("vin") or "",
+                job.get("lot_number") or selector.get("lot_number") or "",
+                run.source_record_id or "",
+                run.request_hash,
+                run.response_hash or "",
+                selector.get("provider") or "",
+                selector.get("enqueue"),
+            ]
+        )
+
+    filename = f"ingestion-runs-{int(time.time())}.csv"
+    return Response(
+        content=buffer.getvalue(),
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@router.post("/fetch-and-enqueue", response_model=IngestionConnectorFetchResponse)
+def fetch_and_enqueue(
+    payload: IngestionConnectorFetchRequest,
+    db: Session = Depends(get_db),
+) -> IngestionConnectorFetchResponse:
+    started_at = time.perf_counter()
+    selector = {
+        "provider": payload.provider,
+        "vin": payload.vin,
+        "lot_number": payload.lot_number,
+        "enqueue": payload.enqueue,
+    }
+    request_hash = _hash_payload(selector)
+
+    mode = "unknown"
+    source_record_id: str | None = None
+    job_json: dict | None = None
+    response_hash: str | None = None
+    enqueued = False
+    queue_depth_value: int | None = None
+
+    try:
+        fetched = fetch_from_connector(payload)
+        mode = fetched.mode
+        source_record_id = fetched.source_record_id
+        job_json = fetched.job.model_dump(mode="json")
+
+        if payload.enqueue:
+            queue_depth_value = enqueue_ingestion_job(fetched.job)
+            enqueued = True
+
+        final_response = IngestionConnectorFetchResponse(
+            provider=fetched.provider,
+            mode=fetched.mode,
+            source_record_id=fetched.source_record_id,
+            enqueued=enqueued,
+            queue_depth=queue_depth_value,
+            run_id=None,
+            job=fetched.job,
+        )
+
+        response_hash = _hash_payload(final_response.model_dump(mode="json"))
+        run = create_ingestion_run(
+            db,
+            provider=payload.provider,
+            mode=mode,
+            selector=selector,
+            request_hash=request_hash,
+            source_record_id=source_record_id,
+            response_hash=response_hash,
+            success=True,
+            error_message=None,
+            latency_ms=_elapsed_ms(started_at),
+            enqueued=enqueued,
+            queue_depth=queue_depth_value,
+            job_json=job_json,
+        )
+
+        final_response.run_id = run.id
+        return final_response
+    except ValueError as exc:
+        _write_failed_run(
+            db,
+            provider=payload.provider,
+            mode=mode,
+            selector=selector,
+            request_hash=request_hash,
+            source_record_id=source_record_id,
+            response_hash=response_hash,
+            error_message=str(exc),
+            latency_ms=_elapsed_ms(started_at),
+            enqueued=enqueued,
+            queue_depth_value=queue_depth_value,
+            job_json=job_json,
+        )
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except NotImplementedError as exc:
+        _write_failed_run(
+            db,
+            provider=payload.provider,
+            mode=mode,
+            selector=selector,
+            request_hash=request_hash,
+            source_record_id=source_record_id,
+            response_hash=response_hash,
+            error_message=str(exc),
+            latency_ms=_elapsed_ms(started_at),
+            enqueued=enqueued,
+            queue_depth_value=queue_depth_value,
+            job_json=job_json,
+        )
+        raise HTTPException(status_code=501, detail=str(exc)) from exc
+    except RedisError as exc:
+        message = f"Queue unavailable: {exc}"
+        _write_failed_run(
+            db,
+            provider=payload.provider,
+            mode=mode,
+            selector=selector,
+            request_hash=request_hash,
+            source_record_id=source_record_id,
+            response_hash=response_hash,
+            error_message=message,
+            latency_ms=_elapsed_ms(started_at),
+            enqueued=False,
+            queue_depth_value=None,
+            job_json=job_json,
+        )
+        raise HTTPException(status_code=503, detail=message) from exc
+    except RuntimeError as exc:
+        _write_failed_run(
+            db,
+            provider=payload.provider,
+            mode=mode,
+            selector=selector,
+            request_hash=request_hash,
+            source_record_id=source_record_id,
+            response_hash=response_hash,
+            error_message=str(exc),
+            latency_ms=_elapsed_ms(started_at),
+            enqueued=enqueued,
+            queue_depth_value=queue_depth_value,
+            job_json=job_json,
+        )
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
 
 
 @router.get("/queue-depth", response_model=IngestionQueueDepth)

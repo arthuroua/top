@@ -4,6 +4,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models import Lot, LotImage, PriceEvent, Vehicle
+from app.repositories.ingestion_history import create_ingestion_snapshot
 from app.schemas import IngestionJobPayload, IngestionProcessResult
 
 
@@ -69,6 +70,8 @@ def apply_ingestion_job(db: Session, job: IngestionJobPayload) -> IngestionProce
                 )
             )
             price_events_added += 1
+
+    create_ingestion_snapshot(db, lot=lot, job=job)
 
     db.commit()
     db.refresh(lot)
