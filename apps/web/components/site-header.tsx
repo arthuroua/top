@@ -19,8 +19,8 @@ export function SiteHeader() {
           <Link href="/search">{dict.nav.search}</Link>
           <Link href="/cars">{dict.nav.catalog}</Link>
           <Link href="/watchlist">{dict.nav.watchlist}</Link>
-          <Link href="/reports">{dict.nav.reports}</Link>
           <Link href="/search#toolkit">{dict.nav.calculator}</Link>
+          <Link href="/about">{dict.nav.about}</Link>
         </nav>
         <div className="localeSwitch" aria-label="Language switcher">
           {SUPPORTED_LOCALES.map((item) => (

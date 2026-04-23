@@ -22,8 +22,8 @@ export default async function CarsHubPage() {
               <Link href="/search" className="button">
                 {dict.cars.openSearch}
               </Link>
-              <Link href="/admin/seo" className="ghostButton">
-                {dict.cars.openAdmin}
+              <Link href="/about" className="ghostButton">
+                {dict.nav.about}
               </Link>
             </div>
           </div>

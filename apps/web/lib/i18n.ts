@@ -22,7 +22,14 @@ export const dictionaries = {
   en: {
     siteName: "Auto Import Hub",
     siteSubtitle: "Auction intelligence for importers",
-    nav: { search: "Search", catalog: "Catalog", watchlist: "Watchlist", reports: "Reports", calculator: "Calculator" },
+    nav: {
+      search: "Search",
+      catalog: "All cars",
+      watchlist: "Watchlist",
+      reports: "Reports",
+      calculator: "Calculator",
+      about: "About / Contacts"
+    },
     home: {
       chip: "Auction Intelligence",
       title: "A modern auction service for importers with VIN history, photos, specs, and margin tools",
@@ -230,12 +237,59 @@ export const dictionaries = {
       expanded: "Expanded",
       marketSales: "Market sales",
       openVin: "Open VIN"
+    },
+    about: {
+      chip: "About the service",
+      title: "A simple tool for people who import cars from U.S. auctions",
+      lead:
+        "The product is built around one practical scenario: enter a VIN or lot number, see the history, photos, specs, and quickly decide whether the car is worth working on.",
+      openSearch: "Open search",
+      openCars: "Open all cars",
+      boardTitle: "How it works",
+      boardSearch: "Input",
+      boardHistory: "History",
+      boardHistoryValue: "Stored",
+      boardDecision: "Decision",
+      boardDecisionValue: "Margin-based",
+      boardAudience: "Audience",
+      boardAudienceValue: "Importers",
+      blockLabel: "Service",
+      blocks: [
+        {
+          title: "Search first",
+          text: "The search page is the main point of entry. One field supports VIN, lot number, and auction URL."
+        },
+        {
+          title: "All cars in one place",
+          text: "The catalog helps browse brands and model pages when you want to explore inventory or landing pages instead of a direct VIN lookup."
+        },
+        {
+          title: "Built for decisions",
+          text: "This is not just history. The service also gives importer math, snapshots, risk signals, and NHTSA specs."
+        },
+        {
+          title: "Made to stay simple",
+          text: "Internal SEO and admin tools stay out of the public menu, so the interface stays clear for normal users."
+        }
+      ],
+      contactsChip: "Contacts",
+      contactsTitle: "How to reach us",
+      contactEmail: "Email",
+      contactFacebook: "Facebook",
+      contactCountry: "Country"
     }
   },
   uk: {
     siteName: "Auto Import Hub",
     siteSubtitle: "Auction intelligence for importers",
-    nav: { search: "Пошук", catalog: "Каталог", watchlist: "Watchlist", reports: "Звіти", calculator: "Калькулятор" },
+    nav: {
+      search: "Пошук",
+      catalog: "Всі авто",
+      watchlist: "Watchlist",
+      reports: "Звіти",
+      calculator: "Калькулятор",
+      about: "Про сервіс / Контакти"
+    },
     home: {
       chip: "Auction Intelligence",
       title: "Сучасний сервіс для пригону з VIN-історією, фото, комплектацією та калькулятором маржі",
@@ -443,12 +497,59 @@ export const dictionaries = {
       expanded: "Розширений",
       marketSales: "Ринкові продажі",
       openVin: "Відкрити VIN"
+    },
+    about: {
+      chip: "Про сервіс",
+      title: "Простий і зрозумілий інструмент для тих, хто приганяє авто зі США",
+      lead:
+        "Сервіс побудований навколо практичного сценарію: ввів VIN або номер лота, побачив історію, фото, комплектацію й швидко зрозумів, чи варто заходити в цю машину.",
+      openSearch: "Відкрити пошук",
+      openCars: "Відкрити всі авто",
+      boardTitle: "Як це працює",
+      boardSearch: "Вхід",
+      boardHistory: "Історія",
+      boardHistoryValue: "Збережена",
+      boardDecision: "Рішення",
+      boardDecisionValue: "По маржі",
+      boardAudience: "Для кого",
+      boardAudienceValue: "Пригонщики",
+      blockLabel: "Сервіс",
+      blocks: [
+        {
+          title: "Головне тут це пошук",
+          text: "Сторінка пошуку має бути головною. Один рядок приймає VIN, номер лота або повний URL аукціону."
+        },
+        {
+          title: "Всі авто окремим розділом",
+          text: "Каталог потрібен для перегляду брендів, моделей і посадкових сторінок, коли ти не шукаєш конкретний VIN."
+        },
+        {
+          title: "Не просто історія, а рішення",
+          text: "Сайт показує не тільки історію, а й комплектацію NHTSA, ринкові підказки, snapshot'и і базову математику для ставки."
+        },
+        {
+          title: "Технічне ховаємо від користувача",
+          text: "SEO адмінка та внутрішні речі не мають бути в публічному меню, щоб інтерфейс залишався чистим і зрозумілим."
+        }
+      ],
+      contactsChip: "Контакти",
+      contactsTitle: "Як з нами зв’язатись",
+      contactEmail: "Email",
+      contactFacebook: "Facebook",
+      contactCountry: "Країна"
     }
   },
   ru: {
     siteName: "Auto Import Hub",
     siteSubtitle: "Auction intelligence for importers",
-    nav: { search: "Поиск", catalog: "Каталог", watchlist: "Watchlist", reports: "Отчёты", calculator: "Калькулятор" },
+    nav: {
+      search: "Поиск",
+      catalog: "Все авто",
+      watchlist: "Watchlist",
+      reports: "Отчёты",
+      calculator: "Калькулятор",
+      about: "О сервисе / Контакты"
+    },
     home: {
       chip: "Auction Intelligence",
       title: "Современный сервис для пригона с VIN-историей, фото, комплектацией и калькулятором маржи",
@@ -656,6 +757,46 @@ export const dictionaries = {
       expanded: "Расширенный",
       marketSales: "Рыночные продажи",
       openVin: "Открыть VIN"
+    },
+    about: {
+      chip: "О сервисе",
+      title: "Простой и понятный инструмент для тех, кто везёт авто из США",
+      lead:
+        "Сервис построен вокруг практического сценария: ввёл VIN или номер лота, увидел историю, фото, комплектацию и быстро понял, стоит ли заходить в эту машину.",
+      openSearch: "Открыть поиск",
+      openCars: "Открыть все авто",
+      boardTitle: "Как это работает",
+      boardSearch: "Вход",
+      boardHistory: "История",
+      boardHistoryValue: "Сохранена",
+      boardDecision: "Решение",
+      boardDecisionValue: "По марже",
+      boardAudience: "Для кого",
+      boardAudienceValue: "Импортёры",
+      blockLabel: "Сервис",
+      blocks: [
+        {
+          title: "Главное здесь это поиск",
+          text: "Страница поиска должна быть главной. Одна строка принимает VIN, номер лота или полный URL аукциона."
+        },
+        {
+          title: "Все авто отдельным разделом",
+          text: "Каталог нужен для просмотра брендов, моделей и посадочных страниц, когда ты не ищешь конкретный VIN."
+        },
+        {
+          title: "Не только история, но и решение",
+          text: "Сайт показывает не только историю, но и комплектацию NHTSA, рыночные подсказки, snapshot'ы и базовую математику ставки."
+        },
+        {
+          title: "Техническое скрыто от пользователя",
+          text: "SEO админка и внутренние вещи не должны быть в публичном меню, чтобы интерфейс оставался чистым и понятным."
+        }
+      ],
+      contactsChip: "Контакты",
+      contactsTitle: "Как с нами связаться",
+      contactEmail: "Email",
+      contactFacebook: "Facebook",
+      contactCountry: "Страна"
     }
   }
 } as const;
