@@ -3,7 +3,10 @@ import Link from "next/link";
 import { getServerDictionary } from "../../lib/server-locale";
 
 export const metadata = {
-  title: "About the service"
+  title: "About the service",
+  alternates: {
+    canonical: "/about"
+  }
 };
 
 export default async function AboutPage() {

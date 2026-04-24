@@ -124,11 +124,29 @@ body {
   box-shadow: 0 10px 20px rgba(27, 79, 153, 0.18);
 }
 
+.themeToggle {
+  min-height: 42px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(27, 79, 153, 0.12);
+  color: var(--accent);
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: none;
+  font-family: var(--font-mono), Consolas, monospace;
+  font-size: 0.8rem;
+}
+
 h1,
 h2,
 h3 {
   margin: 0;
   line-height: 1.08;
+  font-weight: 500;
+}
+
+strong,
+b {
+  font-weight: 500;
 }
 
 p {
@@ -519,11 +537,12 @@ button {
   padding: 0 18px;
   font-family: var(--font-mono), Consolas, monospace;
   font-size: 0.88rem;
+  font-weight: 500;
   letter-spacing: 0.02em;
   text-decoration: none;
   color: #ffffff;
   background: linear-gradient(180deg, var(--accent), var(--accent-strong));
-  box-shadow: 0 14px 30px rgba(27, 79, 153, 0.22);
+  box-shadow: 0 10px 22px rgba(27, 79, 153, 0.14);
   cursor: pointer;
 }
 
@@ -537,6 +556,7 @@ button {
   text-decoration: none;
   font-family: var(--font-mono), Consolas, monospace;
   font-size: 0.88rem;
+  font-weight: 500;
   color: var(--accent);
   border: 1px solid rgba(27, 79, 153, 0.16);
   background: rgba(255, 255, 255, 0.74);
@@ -1640,8 +1660,9 @@ select:focus {
 }
 
 .dangerButton {
-  background: linear-gradient(135deg, #b42318, #7a1f16);
-  color: #fff;
+  border-color: rgba(150, 35, 35, 0.22) !important;
+  color: #9b1c1c !important;
+  background: linear-gradient(180deg, rgba(255, 245, 245, 0.98), rgba(255, 235, 235, 0.92)) !important;
 }
 
 @keyframes signalPulse {
@@ -2089,4 +2110,183 @@ select:focus {
   .autoTopMainPhoto img {
     min-height: 220px;
   }
+}
+
+/* Softer visual weight and theme layer */
+html[data-theme="dark"] {
+  --bg: #101723;
+  --bg-soft: #141d2b;
+  --text: #eef4fb;
+  --muted: #a7b6c8;
+  --panel: rgba(20, 29, 43, 0.9);
+  --line: rgba(174, 196, 224, 0.18);
+  --line-strong: rgba(174, 196, 224, 0.28);
+  --accent: #8fb9ff;
+  --accent-strong: #c5d9ff;
+  --accent-soft: rgba(83, 132, 205, 0.2);
+  --gold: #f0c96d;
+  --gold-strong: #f5d98f;
+  --shadow: 0 20px 55px rgba(0, 0, 0, 0.28);
+  --error-bg: rgba(122, 31, 31, 0.22);
+  --error-text: #ffb3b3;
+}
+
+html[data-theme="dark"] body {
+  background:
+    radial-gradient(900px 480px at 0% 0%, rgba(74, 126, 205, 0.22), transparent 58%),
+    radial-gradient(900px 500px at 100% 0%, rgba(230, 180, 77, 0.12), transparent 54%),
+    linear-gradient(180deg, #0b111b 0%, var(--bg) 58%, #0c131e 100%);
+}
+
+html[data-theme="dark"] .siteHeader {
+  background: rgba(12, 18, 28, 0.76);
+  border-bottom-color: rgba(174, 196, 224, 0.12);
+}
+
+html[data-theme="dark"] .siteNav a,
+html[data-theme="dark"] .localeSwitch,
+html[data-theme="dark"] .localePill,
+html[data-theme="dark"] .themeToggle,
+html[data-theme="dark"] .ghostButton,
+html[data-theme="dark"] .homeSearchForm,
+html[data-theme="dark"] input,
+html[data-theme="dark"] textarea,
+html[data-theme="dark"] select,
+html[data-theme="dark"] .panel,
+html[data-theme="dark"] .recentVehicleCard,
+html[data-theme="dark"] .recentPrice,
+html[data-theme="dark"] .statCard,
+html[data-theme="dark"] .kpiCard,
+html[data-theme="dark"] .featureCard,
+html[data-theme="dark"] .galleryBlock,
+html[data-theme="dark"] .factSheet,
+html[data-theme="dark"] .timelineCard,
+html[data-theme="dark"] .historyRow,
+html[data-theme="dark"] .autoSeoHistoryItem,
+html[data-theme="dark"] .autoSeoLotCard,
+html[data-theme="dark"] .lotCard,
+html[data-theme="dark"] .marketCard,
+html[data-theme="dark"] .marketCompCard,
+html[data-theme="dark"] .watchlistCard,
+html[data-theme="dark"] .watchlistFacts div,
+html[data-theme="dark"] .decoderSummaryCard,
+html[data-theme="dark"] .decoderCard,
+html[data-theme="dark"] .autoSeoQuickFacts > div,
+html[data-theme="dark"] .carsClusterKpi article,
+html[data-theme="dark"] .spotlightFactCard,
+html[data-theme="dark"] .adminSeoItem {
+  color: var(--text);
+  border-color: var(--line);
+  background: rgba(20, 29, 43, 0.82);
+}
+
+html[data-theme="dark"] .siteNav a:first-child,
+html[data-theme="dark"] .localePill.active,
+html[data-theme="dark"] .button,
+html[data-theme="dark"] button:not(.ghostButton):not(.localePill):not(.themeToggle):not(.photoLightboxBackdrop):not(.photoLightboxClose):not(.autoTopMainPhoto):not(.autoTopThumbs button) {
+  color: #07111f;
+  background: linear-gradient(180deg, #c5d9ff, #8fb9ff);
+  box-shadow: 0 10px 24px rgba(143, 185, 255, 0.18);
+}
+
+html[data-theme="dark"] .iaaiHero,
+html[data-theme="dark"] .autoSeoSection,
+html[data-theme="dark"] .carsClusterSection,
+html[data-theme="dark"] .carsHubHero,
+html[data-theme="dark"] .carsClusterHero,
+html[data-theme="dark"] .autoSeoHero {
+  background:
+    radial-gradient(440px 180px at 100% 0%, rgba(232, 183, 74, 0.1), transparent 60%),
+    linear-gradient(180deg, rgba(20, 29, 43, 0.92), rgba(15, 23, 36, 0.9));
+}
+
+html[data-theme="dark"] .auctionBoard,
+html[data-theme="dark"] .liveCard,
+html[data-theme="dark"] .darkShowcase {
+  background: linear-gradient(180deg, rgba(22, 34, 51, 0.98), rgba(13, 21, 33, 0.98));
+  border-color: rgba(174, 196, 224, 0.16);
+}
+
+html[data-theme="dark"] .purchasePriceHero,
+html[data-theme="dark"] .recentPrice {
+  background: linear-gradient(180deg, rgba(21, 68, 47, 0.42), rgba(18, 51, 39, 0.36));
+  border-color: rgba(54, 179, 111, 0.22);
+}
+
+html[data-theme="dark"] .purchasePriceHero strong,
+html[data-theme="dark"] .recentPrice strong,
+html[data-theme="dark"] .statusOk {
+  color: #7ee0a0;
+}
+
+html[data-theme="dark"] .dangerButton {
+  border-color: rgba(255, 132, 132, 0.24) !important;
+  color: #ffb3b3 !important;
+  background: linear-gradient(180deg, rgba(95, 28, 28, 0.74), rgba(70, 23, 23, 0.7)) !important;
+}
+
+html[data-theme="dark"] .photoLightboxPanel {
+  background: rgba(18, 27, 41, 0.96);
+}
+
+.homeSearchMinimal h1,
+.homeSearchCopy h1,
+.homeHero h1,
+.marketHero h1,
+.carsHubHero h1,
+.carsClusterHero h1,
+.autoSeoHero h1 {
+  font-weight: 500;
+}
+
+.recentPrice strong,
+.purchasePriceHero strong {
+  font-weight: 500;
+  letter-spacing: -0.04em;
+}
+
+.label,
+.chip,
+.siteBrand span,
+.siteNav a,
+.localePill,
+.themeToggle,
+.button,
+.ghostButton,
+button {
+  font-weight: 500;
+}
+
+.panel,
+.recentVehicleCard,
+.watchlistCard,
+.statCard,
+.kpiCard,
+.featureCard,
+.marketCard,
+.marketCompCard,
+.decoderCard,
+.decoderSummaryCard,
+.autoSeoLotCard,
+.autoSeoHistoryItem,
+.historyRow,
+.lotCard {
+  box-shadow: 0 14px 34px rgba(16, 31, 51, 0.08);
+}
+
+html[data-theme="dark"] .panel,
+html[data-theme="dark"] .recentVehicleCard,
+html[data-theme="dark"] .watchlistCard,
+html[data-theme="dark"] .statCard,
+html[data-theme="dark"] .kpiCard,
+html[data-theme="dark"] .featureCard,
+html[data-theme="dark"] .marketCard,
+html[data-theme="dark"] .marketCompCard,
+html[data-theme="dark"] .decoderCard,
+html[data-theme="dark"] .decoderSummaryCard,
+html[data-theme="dark"] .autoSeoLotCard,
+html[data-theme="dark"] .autoSeoHistoryItem,
+html[data-theme="dark"] .historyRow,
+html[data-theme="dark"] .lotCard {
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.22);
 }

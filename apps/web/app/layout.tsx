@@ -10,13 +10,13 @@ import { DEFAULT_LOCALE, LOCALE_COOKIE, getDictionary, normalizeLocale } from ".
 
 const display = Space_Grotesk({
   subsets: ["latin"],
-  weight: ["400", "500", "700"],
+  weight: ["300", "400", "500", "600"],
   variable: "--font-display"
 });
 
 const mono = JetBrains_Mono({
   subsets: ["latin"],
-  weight: ["500"],
+  weight: ["400", "500"],
   variable: "--font-mono"
 });
 

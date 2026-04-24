@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { cache } from "react";
 
 import { AutoPhotoGallery } from "../../../components/auto-photo-gallery";
@@ -287,6 +288,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 export default async function AutoSeoPage({ params }: PageProps) {
   const { vin: vinParam } = await params;
   const vin = normalizeVin(vinParam);
+  if (vinParam !== vin) redirect(`/auto/${vin}`);
   const { dict, locale } = await getServerDictionary();
   const vehicle = await getVehicle(vin);
 

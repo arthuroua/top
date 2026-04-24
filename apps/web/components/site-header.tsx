@@ -4,6 +4,7 @@ import Link from "next/link";
 
 import { LANGUAGE_LABELS, SUPPORTED_LOCALES, type Locale } from "../lib/i18n";
 import { useI18n } from "./i18n-provider";
+import { ThemeToggle } from "./theme-toggle";
 
 export function SiteHeader() {
   const { locale, setLocale, dict } = useI18n();
@@ -34,6 +35,7 @@ export function SiteHeader() {
             </button>
           ))}
         </div>
+        <ThemeToggle />
       </div>
     </header>
   );

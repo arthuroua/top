@@ -8,12 +8,12 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: "*",
         allow: "/",
-        disallow: ["/admin/", "/ingestion", "/reports", "/shared/", "/search", "/api/"]
+        disallow: ["/admin/", "/ingestion", "/reports", "/shared/", "/watchlist", "/search", "/api/"]
       },
       {
         userAgent: "Yandex",
         allow: "/",
-        disallow: ["/admin/", "/ingestion", "/reports", "/shared/", "/search", "/api/"]
+        disallow: ["/admin/", "/ingestion", "/reports", "/shared/", "/watchlist", "/search", "/api/"]
       }
     ],
     sitemap: `${siteUrl}/sitemap.xml`,
