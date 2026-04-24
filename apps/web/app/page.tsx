@@ -57,7 +57,7 @@ export default function HomePage() {
     let alive = true;
     async function loadRecent() {
       try {
-        const response = await fetch(`${API_BASE}/api/v1/vehicles/recent?limit=12`);
+        const response = await fetch(`${API_BASE}/api/v1/vehicles/recent?limit=8`);
         if (!response.ok) return;
         const data = (await response.json()) as RecentVehiclesResponse;
         if (alive) setVehicles(data.items || []);
@@ -78,12 +78,8 @@ export default function HomePage() {
 
   return (
     <main className="shell homeSimpleShell">
-      <section className="homeSearchBand">
-        <div className="homeSearchCopy">
-          <p className="chip">{dict.home.chip}</p>
-          <h1>{dict.home.simpleTitle}</h1>
-          <p className="lead">{dict.home.simpleLead}</p>
-        </div>
+      <section className="homeSearchBand homeSearchMinimal">
+        <h1>{dict.home.simpleTitle}</h1>
         <form className="homeSearchForm" action={searchHref}>
           <input
             value={query}
@@ -95,14 +91,16 @@ export default function HomePage() {
             {dict.search.submit}
           </Link>
         </form>
+        <div className="homeQuickLinks" aria-label="Quick navigation">
+          <Link href="/cars">{dict.nav.catalog}</Link>
+          <Link href="/watchlist">{dict.nav.watchlist}</Link>
+          <Link href="/reports">{dict.nav.reports}</Link>
+        </div>
       </section>
 
       <section className="recentVehiclesSection">
-        <div className="sectionHead">
-          <div>
-            <h2>{dict.home.recentTitle}</h2>
-            <p className="muted">{dict.home.recentLead}</p>
-          </div>
+        <div className="simpleSectionHead">
+          <h2>{dict.home.recentTitle}</h2>
           <Link href="/cars" className="ghostButton">
             {dict.nav.catalog}
           </Link>
@@ -110,7 +108,7 @@ export default function HomePage() {
 
         {loading ? (
           <div className="recentVehiclesGrid">
-            {Array.from({ length: 6 }).map((_, index) => (
+            {Array.from({ length: 4 }).map((_, index) => (
               <div key={index} className="recentVehicleCard recentVehicleSkeleton" />
             ))}
           </div>

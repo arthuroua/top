@@ -148,13 +148,27 @@ a {
 }
 
 .homeSimpleShell {
-  gap: 28px;
+  gap: 24px;
 }
 
 .homeSearchBand {
   display: grid;
   gap: 18px;
   padding: 28px 0 10px;
+}
+
+.homeSearchMinimal {
+  max-width: 920px;
+  margin: 0 auto;
+  width: 100%;
+  text-align: center;
+}
+
+.homeSearchMinimal h1 {
+  max-width: 12ch;
+  margin: 0 auto;
+  font-size: clamp(2.6rem, 7vw, 5.8rem);
+  letter-spacing: -0.06em;
 }
 
 .homeSearchCopy h1 {
@@ -191,14 +205,43 @@ a {
   font: inherit;
 }
 
+.homeQuickLinks {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+
+.homeQuickLinks a {
+  text-decoration: none;
+  color: var(--accent-strong);
+  border: 1px solid rgba(27, 79, 153, 0.14);
+  border-radius: 999px;
+  padding: 10px 13px;
+  background: rgba(255, 255, 255, 0.78);
+  font-family: var(--font-mono), Consolas, monospace;
+  font-size: 0.82rem;
+}
+
 .recentVehiclesSection {
   display: grid;
   gap: 16px;
 }
 
+.simpleSectionHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.simpleSectionHead h2 {
+  font-size: clamp(1.55rem, 3vw, 2.3rem);
+}
+
 .recentVehiclesGrid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 14px;
 }
 
@@ -1542,11 +1585,14 @@ select:focus {
   .marketSummaryGrid,
   .marketCompList,
   .modelMenuGrid,
-  .recentVehiclesGrid,
   .watchlistGrid,
   .watchlistFacts,
   .contactGrid {
     grid-template-columns: 1fr;
+  }
+
+  .recentVehiclesGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -1623,6 +1669,23 @@ select:focus {
     width: min(960px, 94vw);
     margin-top: 22px;
     gap: 14px;
+  }
+
+  .homeSearchBand {
+    padding-top: 14px;
+  }
+
+  .homeSearchMinimal h1 {
+    max-width: 11ch;
+  }
+
+  .simpleSectionHead {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .recentVehiclesGrid {
+    grid-template-columns: 1fr;
   }
 
   .panel {

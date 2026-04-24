@@ -33,8 +33,8 @@ export const dictionaries = {
     home: {
       chip: "Auction Intelligence",
       title: "A modern auction service for importers with VIN history, photos, specs, and margin tools",
-      simpleTitle: "Find a car by VIN, lot, or auction URL",
-      simpleLead: "See the purchase price, photos, auction history, specs, and importer tools from one search.",
+      simpleTitle: "Find a U.S. auction car",
+      simpleLead: "Enter VIN, lot number, or auction URL.",
       recentTitle: "Recently added cars",
       recentLead: "Fresh vehicles from the database with photos, lot status, and purchase price.",
       recentEmptyTitle: "No cars in the database yet",
@@ -313,8 +313,8 @@ export const dictionaries = {
     home: {
       chip: "Auction Intelligence",
       title: "Сучасний сервіс для пригону з VIN-історією, фото, комплектацією та калькулятором маржі",
-      simpleTitle: "Знайди авто по VIN, лоту або URL аукціону",
-      simpleLead: "Одразу бачиш ціну покупки, фото, історію аукціону, комплектацію та інструменти для пригонщика.",
+      simpleTitle: "Знайти авто зі США",
+      simpleLead: "Введи VIN, номер лота або URL аукціону.",
       recentTitle: "Останні додані авто",
       recentLead: "Свіжі авто з бази з фото, статусом лота і ціною покупки.",
       recentEmptyTitle: "У базі ще немає авто",
@@ -593,8 +593,8 @@ export const dictionaries = {
     home: {
       chip: "Auction Intelligence",
       title: "Современный сервис для пригона с VIN-историей, фото, комплектацией и калькулятором маржи",
-      simpleTitle: "Найди авто по VIN, лоту или URL аукциона",
-      simpleLead: "Сразу видишь цену покупки, фото, историю аукциона, комплектацию и инструменты для пригонщика.",
+      simpleTitle: "Найти авто из США",
+      simpleLead: "Введите VIN, номер лота или URL аукциона.",
       recentTitle: "Последние добавленные авто",
       recentLead: "Свежие авто из базы с фото, статусом лота и ценой покупки.",
       recentEmptyTitle: "В базе пока нет авто",
