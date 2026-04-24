@@ -135,7 +135,7 @@ type IngestionRunsPageResponse = {
 
 type RunsRefreshSource = "manual" | "auto";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
+const API_BASE = "/api/backend";
 const STORAGE_KEYS = {
   autoRefreshEnabled: "ingestion.auto_refresh_enabled",
   autoRefreshSeconds: "ingestion.auto_refresh_seconds",

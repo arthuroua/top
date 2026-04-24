@@ -6,7 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useI18n } from "../../components/i18n-provider";
 import { readWatchlist, writeWatchlist, type WatchlistSnapshot } from "../../lib/watchlist";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
+const API_BASE = "/api/backend";
 
 type VehicleResponse = {
   vin: string;

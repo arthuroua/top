@@ -104,7 +104,7 @@ type PageProps = {
   params: Promise<{ vin: string }>;
 };
 
-const apiPublicBase = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
+const apiPublicBase = "/api/backend";
 const apiInternalBase = process.env.API_INTERNAL_BASE_URL || apiPublicBase;
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
 

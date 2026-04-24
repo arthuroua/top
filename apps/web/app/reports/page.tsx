@@ -52,7 +52,7 @@ type ReportShareResponse = {
   revoked_at: string | null;
 };
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
+const API_BASE = "/api/backend";
 const PIPELINE_STAGES: ReportPipelineStage[] = ["lead", "bid", "won", "in_transit", "customs", "delivered"];
 
 function toMoney(value: number | null | undefined): string {

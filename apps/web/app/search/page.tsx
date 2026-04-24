@@ -133,7 +133,7 @@ type MarketCompsResponse = {
   }>;
 };
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
+const API_BASE = "/api/backend";
 
 const DEFAULT_TOOL_FORM: ToolForm = {
   expectedSellUsd: "17000",

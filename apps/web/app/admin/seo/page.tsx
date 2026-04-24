@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 
@@ -63,7 +63,7 @@ type FormState = {
   is_active: boolean;
 };
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
+const API_BASE = "/api/backend";
 const LOCALES = ["en", "uk", "ru"] as const;
 
 const emptyFaqItem = (): SeoFaqItem => ({ question: "", answer: "" });
