@@ -22,7 +22,7 @@ export function WatchlistToggle({ snapshot }: { snapshot: WatchlistSnapshot }) {
   return (
     <button
       type="button"
-      className={`ghostButton watchlistButton ${saved ? "watchlistButtonActive" : ""}`}
+      className={`ghostButton watchlistButton ${saved ? "watchlistButtonActive dangerButton" : ""}`}
       onClick={() => setSaved(toggleWatchlist(snapshot))}
     >
       {saved ? dict.watchlist.remove : dict.watchlist.add}

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { cache } from "react";
 
+import { AutoPhotoGallery } from "../../../components/auto-photo-gallery";
 import { WatchlistToggle } from "../../../components/watchlist-toggle";
 import { assessVehicleRisk } from "../../../lib/risk";
 import { getServerDictionary } from "../../../lib/server-locale";
@@ -444,22 +445,7 @@ export default async function AutoSeoPage({ params }: PageProps) {
           <a href="#vin-history">{dict.auto.updateLogTitle}</a>
           <a href="#vin-profit">{dict.auto.openCalculator}</a>
         </div>
-        {latestLotImages.length > 0 && (
-          <div className="autoTopGallery">
-            <a href={latestLotImages[0]} target="_blank" rel="noreferrer" className="autoTopMainPhoto">
-              <img src={latestLotImages[0]} alt={`${vehicleName} main auction photo`} loading="eager" />
-            </a>
-            {latestLotImages.length > 1 && (
-              <div className="autoTopThumbs">
-                {latestLotImages.slice(1, 5).map((url, imageIndex) => (
-                  <a key={`${url}-top-${imageIndex}`} href={url} target="_blank" rel="noreferrer">
-                    <img src={url} alt={`${vehicleName} auction photo ${imageIndex + 2}`} loading="lazy" />
-                  </a>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
+        <AutoPhotoGallery images={latestLotImages} vehicleName={vehicleName} />
         <div className="autoSeoQuickFacts">
           <div>
             <p className="label">VIN</p>

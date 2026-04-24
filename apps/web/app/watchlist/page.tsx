@@ -210,7 +210,7 @@ export default function WatchlistPage() {
                   <Link href={`/search?vin=${card.saved.vin}`} className="ghostButton">
                     {dict.watchlist.openAnalysis}
                   </Link>
-                  <button type="button" className="ghostButton" onClick={() => removeVin(card.saved.vin)}>
+                  <button type="button" className="ghostButton dangerButton" onClick={() => removeVin(card.saved.vin)}>
                     {dict.watchlist.remove}
                   </button>
                 </div>
