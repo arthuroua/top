@@ -554,6 +554,42 @@ select:focus {
   gap: 8px;
 }
 
+.purchasePriceHero {
+  margin-top: 12px;
+  display: grid;
+  gap: 5px;
+  border: 1px solid rgba(25, 135, 84, 0.28);
+  border-radius: 16px;
+  padding: 18px;
+  background:
+    radial-gradient(420px 160px at 100% 0%, rgba(31, 171, 106, 0.12), transparent 62%),
+    linear-gradient(180deg, rgba(246, 255, 250, 0.98), rgba(236, 250, 242, 0.94));
+}
+
+.purchasePriceHero p {
+  color: #23714a;
+  font-family: var(--font-mono), Consolas, monospace;
+  font-size: 0.82rem;
+  text-transform: uppercase;
+}
+
+.purchasePriceHero strong {
+  color: #118047;
+  font-size: clamp(2.2rem, 6vw, 4.8rem);
+  line-height: 0.95;
+  letter-spacing: 0;
+}
+
+.purchasePriceHero span {
+  color: #4a6d58;
+  font-weight: 700;
+}
+
+.spotlightPriceHero {
+  grid-column: 1 / -1;
+  margin-top: 0;
+}
+
 .factList div {
   display: grid;
   grid-template-columns: 1fr 1fr;

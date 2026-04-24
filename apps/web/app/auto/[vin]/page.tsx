@@ -473,6 +473,13 @@ export default async function AutoSeoPage({ params }: PageProps) {
               )}
             </div>
             <div className="lotSpotlightFacts">
+              <div className="purchasePriceHero spotlightPriceHero">
+                <p>{dict.search.boughtFor}</p>
+                <strong>{toMoney(latestLot.hammer_price_usd)}</strong>
+                <span>
+                  #{latestLot.lot_number} · {latestLot.status || "-"}
+                </span>
+              </div>
               <div className="spotlightFactCard">
                 <p className="label">{dict.search.source}</p>
                 <h3>{latestLot.source}</h3>
@@ -483,11 +490,13 @@ export default async function AutoSeoPage({ params }: PageProps) {
                 <h3>{latestLot.sale_date || "-"}</h3>
                 <p>{dict.search.location}: {latestLot.location || "-"}</p>
               </div>
-              <div className="spotlightFactCard">
-                <p className="label">{dict.search.finalBid}</p>
-                <h3>{toMoney(latestLot.hammer_price_usd)}</h3>
-                <p>{dict.search.market.lowerBound}: {toMoney(lowerBound)}</p>
-              </div>
+              {lowerBound !== null && (
+                <div className="spotlightFactCard">
+                  <p className="label">{dict.search.market.lowerBound}</p>
+                  <h3>{toMoney(lowerBound)}</h3>
+                  <p>{dict.search.market.median}: {toMoney(medianPrice)}</p>
+                </div>
+              )}
               <div className="spotlightFactCard">
                 <p className="label">{dict.search.kpiStatus}</p>
                 <h3>{latestLot.status || "-"}</h3>

@@ -674,44 +674,49 @@ export default function SearchPage() {
               <section className="factSheet">
                 <p className="label">{dict.search.lotCard}</p>
                 {activeLot ? (
-                  <dl className="factList">
-                    <div>
-                      <dt>{dict.search.source}</dt>
-                      <dd>{activeLot.source}</dd>
+                  <>
+                    <div className="purchasePriceHero">
+                      <p>{dict.search.boughtFor}</p>
+                      <strong>{toMoney(activeLot.hammer_price_usd, "USD")}</strong>
+                      <span>
+                        #{activeLot.lot_number} · {activeLot.status || "-"}
+                      </span>
                     </div>
-                    <div>
-                      <dt>{dict.search.lot}</dt>
-                      <dd>#{activeLot.lot_number}</dd>
-                    </div>
-                    <div>
-                      <dt>{dict.search.saleDate}</dt>
-                      <dd>{activeLot.sale_date || "-"}</dd>
-                    </div>
-                    <div>
-                      <dt>{dict.search.finalBid}</dt>
-                      <dd>{toMoney(activeLot.hammer_price_usd, "USD")}</dd>
-                    </div>
-                    <div>
-                      <dt>{dict.search.kpiStatus}</dt>
-                      <dd>{activeLot.status || "-"}</dd>
-                    </div>
-                    <div>
-                      <dt>{dict.search.location}</dt>
-                      <dd>{activeLot.location || "-"}</dd>
-                    </div>
-                    {activeLot.primary_damage && (
+                    <dl className="factList">
+                      <div>
+                        <dt>{dict.search.source}</dt>
+                        <dd>{activeLot.source}</dd>
+                      </div>
+                      <div>
+                        <dt>{dict.search.lot}</dt>
+                        <dd>#{activeLot.lot_number}</dd>
+                      </div>
+                      <div>
+                        <dt>{dict.search.saleDate}</dt>
+                        <dd>{activeLot.sale_date || "-"}</dd>
+                      </div>
+                      <div>
+                        <dt>{dict.search.kpiStatus}</dt>
+                        <dd>{activeLot.status || "-"}</dd>
+                      </div>
+                      <div>
+                        <dt>{dict.search.location}</dt>
+                        <dd>{activeLot.location || "-"}</dd>
+                      </div>
+                      {activeLot.primary_damage && (
                       <div>
                         <dt>Damage</dt>
                         <dd>{activeLot.primary_damage}</dd>
                       </div>
-                    )}
-                    {activeLot.odometer && (
+                      )}
+                      {activeLot.odometer && (
                       <div>
                         <dt>Odometer</dt>
                         <dd>{activeLot.odometer.toLocaleString("en-US")} mi</dd>
                       </div>
-                    )}
-                  </dl>
+                      )}
+                    </dl>
+                  </>
                 ) : (
                   <p className="lead muted">{dict.search.noLots}</p>
                 )}
