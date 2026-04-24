@@ -52,6 +52,24 @@ type CopartCsvRunResult = {
   finished_at: string;
 };
 
+type EnrichmentQueueDepth = {
+  queue_depth: number;
+};
+
+type EnrichmentEnqueueResult = {
+  enqueued: number;
+  queue_depth: number;
+};
+
+type EnrichmentProcessResult = {
+  processed: boolean;
+  message: string;
+  vin?: string | null;
+  source?: string | null;
+  lot_number?: string | null;
+  images_added: number;
+};
+
 type ConnectorStatus = {
   provider: "copart" | "iaai";
   mode: string;
@@ -254,12 +272,18 @@ export default function IngestionPage() {
   const [loadingDepth, setLoadingDepth] = useState(false);
   const [loadingProcess, setLoadingProcess] = useState(false);
   const [loadingCopartCsvRun, setLoadingCopartCsvRun] = useState(false);
+  const [loadingEnrichmentDepth, setLoadingEnrichmentDepth] = useState(false);
+  const [loadingEnrichmentEnqueue, setLoadingEnrichmentEnqueue] = useState(false);
+  const [loadingEnrichmentProcess, setLoadingEnrichmentProcess] = useState(false);
 
   const [error, setError] = useState("");
   const [enqueueResult, setEnqueueResult] = useState<IngestionEnqueueResponse | null>(null);
   const [depthResult, setDepthResult] = useState<IngestionQueueDepth | null>(null);
   const [processResult, setProcessResult] = useState<IngestionProcessResult | null>(null);
   const [copartCsvResult, setCopartCsvResult] = useState<CopartCsvRunResult | null>(null);
+  const [enrichmentDepthResult, setEnrichmentDepthResult] = useState<EnrichmentQueueDepth | null>(null);
+  const [enrichmentEnqueueResult, setEnrichmentEnqueueResult] = useState<EnrichmentEnqueueResult | null>(null);
+  const [enrichmentProcessResult, setEnrichmentProcessResult] = useState<EnrichmentProcessResult | null>(null);
   const [adminToken, setAdminToken] = useState<string>(() => {
     if (typeof window === "undefined") return "";
     try {
@@ -553,6 +577,63 @@ export default function IngestionPage() {
       setError(err instanceof Error ? err.message : "Request failed");
     } finally {
       setLoadingCopartCsvRun(false);
+    }
+  }
+
+  async function checkEnrichmentQueueDepth() {
+    setError("");
+    setEnrichmentDepthResult(null);
+    setLoadingEnrichmentDepth(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/v1/ingestion/enrichment/queue-depth`);
+      if (!res.ok) throw new Error(await readApiError(res, "Failed to fetch enrichment queue depth"));
+      const json = (await res.json()) as EnrichmentQueueDepth;
+      setEnrichmentDepthResult(json);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Request failed");
+    } finally {
+      setLoadingEnrichmentDepth(false);
+    }
+  }
+
+  async function enqueueRecentEnrichment() {
+    setError("");
+    setEnrichmentEnqueueResult(null);
+    setLoadingEnrichmentEnqueue(true);
+    try {
+      const params = new URLSearchParams({ limit: "1000", only_single_image: "true" });
+      const res = await fetch(`${API_BASE}/api/v1/ingestion/enrichment/enqueue-recent?${params.toString()}`, {
+        method: "POST",
+        headers: { "X-Admin-Token": adminToken.trim() }
+      });
+      if (!res.ok) throw new Error(await readApiError(res, "Failed to enqueue enrichment jobs"));
+      const json = (await res.json()) as EnrichmentEnqueueResult;
+      setEnrichmentEnqueueResult(json);
+      await checkEnrichmentQueueDepth();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Request failed");
+    } finally {
+      setLoadingEnrichmentEnqueue(false);
+    }
+  }
+
+  async function processOneEnrichment() {
+    setError("");
+    setEnrichmentProcessResult(null);
+    setLoadingEnrichmentProcess(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/v1/ingestion/enrichment/process-one`, {
+        method: "POST",
+        headers: { "X-Admin-Token": adminToken.trim() }
+      });
+      if (!res.ok) throw new Error(await readApiError(res, "Failed to process enrichment queue"));
+      const json = (await res.json()) as EnrichmentProcessResult;
+      setEnrichmentProcessResult(json);
+      await checkEnrichmentQueueDepth();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Request failed");
+    } finally {
+      setLoadingEnrichmentProcess(false);
     }
   }
 
@@ -1109,6 +1190,15 @@ export default function IngestionPage() {
           <button type="button" onClick={processOne} disabled={loadingProcess}>
             {loadingProcess ? "Processing" : "Process One"}
           </button>
+          <button type="button" onClick={enqueueRecentEnrichment} disabled={loadingEnrichmentEnqueue || !adminToken.trim()}>
+            {loadingEnrichmentEnqueue ? "Enqueueing Enrichment" : "Enqueue Photo Enrichment"}
+          </button>
+          <button type="button" onClick={checkEnrichmentQueueDepth} disabled={loadingEnrichmentDepth}>
+            {loadingEnrichmentDepth ? "Checking Enrichment" : "Check Enrichment Depth"}
+          </button>
+          <button type="button" onClick={processOneEnrichment} disabled={loadingEnrichmentProcess || !adminToken.trim()}>
+            {loadingEnrichmentProcess ? "Enriching One" : "Process One Enrichment"}
+          </button>
         </div>
 
         {depthResult && (
@@ -1131,6 +1221,37 @@ export default function IngestionPage() {
             {copartCsvResult.processing_errors.length > 0 && (
               <p>Errors: {copartCsvResult.processing_errors.join(" | ")}</p>
             )}
+          </div>
+        )}
+
+        {enrichmentDepthResult && (
+          <div className="panel reportSaved">
+            <p className="label">Enrichment Queue Depth</p>
+            <h3>{enrichmentDepthResult.queue_depth}</h3>
+          </div>
+        )}
+
+        {enrichmentEnqueueResult && (
+          <div className="panel reportSaved">
+            <p className="label">Photo Enrichment Enqueue</p>
+            <p>Enqueued: {enrichmentEnqueueResult.enqueued}</p>
+            <p>Queue depth: {enrichmentEnqueueResult.queue_depth}</p>
+          </div>
+        )}
+
+        {enrichmentProcessResult && (
+          <div className="panel reportSaved">
+            <p className="label">Photo Enrichment Result</p>
+            <p>Processed: {String(enrichmentProcessResult.processed)}</p>
+            <p>Message: {enrichmentProcessResult.message}</p>
+            <p>VIN: {enrichmentProcessResult.vin || "-"}</p>
+            <p>
+              Lot:{" "}
+              {enrichmentProcessResult.source && enrichmentProcessResult.lot_number
+                ? `${enrichmentProcessResult.source} #${enrichmentProcessResult.lot_number}`
+                : "-"}
+            </p>
+            <p>Images added: {enrichmentProcessResult.images_added}</p>
           </div>
         )}
 

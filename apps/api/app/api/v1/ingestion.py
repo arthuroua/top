@@ -1,4 +1,4 @@
-﻿import csv
+import csv
 import hashlib
 import io
 import json
@@ -9,9 +9,11 @@ import time
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
 from fastapi.responses import Response
 from redis.exceptions import RedisError
-from sqlalchemy.orm import Session
+from sqlalchemy import select
+from sqlalchemy.orm import Session, selectinload
 
 from app.db import get_db
+from app.models import Lot
 from app.repositories.ingestion import apply_ingestion_job
 from app.repositories.ingestion_history import count_ingestion_snapshots, list_ingestion_snapshots
 from app.repositories.ingestion_runs import count_ingestion_runs, create_ingestion_run, list_ingestion_runs
@@ -30,7 +32,15 @@ from app.schemas import (
 )
 from app.services.connectors import connector_statuses, fetch_from_connector
 from app.services.copart_csv import load_copart_csv_config, run_copart_csv_ingestion
-from app.services.ingestion_queue import enqueue_ingestion_job, pop_ingestion_job, queue_depth
+from app.services.ingestion_queue import (
+    enrichment_queue_depth,
+    enqueue_enrichment_job,
+    enqueue_ingestion_job,
+    pop_enrichment_job,
+    pop_ingestion_job,
+    queue_depth,
+)
+from app.services.lot_enrichment import enrich_lot_images
 
 router = APIRouter(prefix="/api/v1/ingestion", tags=["ingestion"])
 
@@ -495,6 +505,64 @@ def get_queue_depth() -> IngestionQueueDepth:
         raise HTTPException(status_code=503, detail=f"Queue unavailable: {exc}") from exc
 
     return IngestionQueueDepth(queue_depth=depth)
+
+
+@router.get("/enrichment/queue-depth")
+def get_enrichment_queue_depth() -> dict:
+    try:
+        depth = enrichment_queue_depth()
+    except RedisError as exc:
+        raise HTTPException(status_code=503, detail=f"Queue unavailable: {exc}") from exc
+    return {"queue_depth": depth}
+
+
+@router.post("/enrichment/enqueue-recent", dependencies=[Depends(_require_admin)])
+def enqueue_recent_enrichment(
+    limit: int = Query(default=500, ge=1, le=5000),
+    only_single_image: bool = Query(default=True),
+    db: Session = Depends(get_db),
+) -> dict:
+    lots = (
+        db.execute(
+            select(Lot)
+            .options(selectinload(Lot.images))
+            .where(Lot.source == "copart")
+            .order_by(Lot.fetched_at.desc())
+            .limit(limit)
+        )
+        .scalars()
+        .all()
+    )
+
+    enqueued = 0
+    last_depth = 0
+    for lot in lots:
+        if only_single_image and len(lot.images) != 1:
+            continue
+        if not lot.images:
+            continue
+        last_depth = enqueue_enrichment_job({"source": lot.source, "lot_number": lot.lot_number, "vin": lot.vin})
+        enqueued += 1
+
+    return {"enqueued": enqueued, "queue_depth": last_depth}
+
+
+@router.post("/enrichment/process-one", dependencies=[Depends(_require_admin)])
+def process_one_enrichment(db: Session = Depends(get_db)) -> dict:
+    try:
+        job = pop_enrichment_job(timeout=1)
+    except RedisError as exc:
+        raise HTTPException(status_code=503, detail=f"Queue unavailable: {exc}") from exc
+
+    if job is None:
+        return {"processed": False, "message": "No enrichment jobs in queue", "images_added": 0}
+
+    return enrich_lot_images(
+        db,
+        source=str(job.get("source") or "copart"),
+        lot_number=str(job.get("lot_number") or ""),
+        vin=str(job.get("vin")) if job.get("vin") else None,
+    )
 
 
 @router.post("/copart-csv/run-once", dependencies=[Depends(_require_admin)])
