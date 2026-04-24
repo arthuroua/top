@@ -132,6 +132,10 @@ export const dictionaries = {
         unavailable: "Decoder data is temporarily unavailable for this VIN.",
         note: "NHTSA note"
       },
+      auctionSpecs: {
+        title: "Auction specs",
+        lead: "Lot description, damage, odometer, and equipment details captured from the auction feed."
+      },
       risk: {
         title: "Lot risk score",
         lead: "A quick signal for importers before going deeper into pricing and repair math.",
@@ -392,6 +396,10 @@ export const dictionaries = {
         unavailable: "Дані декодера тимчасово недоступні для цього VIN.",
         note: "Примітка NHTSA"
       },
+      auctionSpecs: {
+        title: "Характеристики з аукціону",
+        lead: "Опис лота, пошкодження, пробіг і комплектація, які приходять з аукціонного джерела."
+      },
       risk: {
         title: "Ризик лота",
         lead: "Швидкий сигнал для пригонщика перед глибшим розрахунком ремонту й економіки.",
@@ -651,6 +659,10 @@ export const dictionaries = {
         source: "Открыть официальную страницу NHTSA",
         unavailable: "Данные декодера временно недоступны для этого VIN.",
         note: "Примечание NHTSA"
+      },
+      auctionSpecs: {
+        title: "Характеристики с аукциона",
+        lead: "Описание лота, повреждения, пробег и комплектация, которые приходят из аукционного источника."
       },
       risk: {
         title: "Риск лота",

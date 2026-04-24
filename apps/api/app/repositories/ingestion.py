@@ -1,6 +1,6 @@
 ﻿from datetime import datetime, timezone
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.models import Lot, LotImage, PriceEvent, Vehicle
@@ -16,8 +16,18 @@ def apply_ingestion_job(db: Session, job: IngestionJobPayload) -> IngestionProce
         vehicle = Vehicle(vin=vin)
         db.add(vehicle)
         db.flush()
+    if job.make:
+        vehicle.make = job.make
+    if job.model:
+        vehicle.model = job.model
+    if job.year:
+        vehicle.year = job.year
+    if job.title_brand:
+        vehicle.title_brand = job.title_brand
 
-    lot = db.execute(select(Lot).where(Lot.source == job.source, Lot.lot_number == job.lot_number)).scalar_one_or_none()
+    lot = db.execute(
+        select(Lot).where(func.lower(Lot.source) == job.source.lower(), Lot.lot_number == job.lot_number)
+    ).scalar_one_or_none()
     if lot is None:
         lot = Lot(source=job.source, lot_number=job.lot_number, vin=vin)
         db.add(lot)

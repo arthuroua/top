@@ -33,6 +33,13 @@ type LotResponse = {
   hammer_price_usd: number | null;
   status: string | null;
   location: string | null;
+  title_brand: string | null;
+  primary_damage: string | null;
+  secondary_damage: string | null;
+  odometer: number | null;
+  run_and_drive: boolean | null;
+  keys_present: boolean | null;
+  auction_specs: Record<string, string | number | boolean | null>;
   images: Array<{
     image_url: string;
     shot_order: number | null;
@@ -191,6 +198,42 @@ function getVehicleName(vehicle: VehicleResponse | null): string {
   return parts.length > 0 ? parts.join(" ") : "Unknown vehicle";
 }
 
+function toYesNo(value: boolean | null | undefined): string {
+  if (value === true) return "Yes";
+  if (value === false) return "No";
+  return "-";
+}
+
+function buildAuctionSpecRows(lot: LotResponse | null): Array<[string, string]> {
+  if (!lot) return [];
+  const rows: Array<[string, string]> = [
+    ["Title", lot.title_brand || "-"],
+    ["Primary damage", lot.primary_damage || "-"],
+    ["Secondary damage", lot.secondary_damage || "-"],
+    ["Odometer", lot.odometer ? `${lot.odometer.toLocaleString("en-US")} mi` : "-"],
+    ["Run & drive", toYesNo(lot.run_and_drive)],
+    ["Keys", toYesNo(lot.keys_present)]
+  ];
+  const specLabels: Record<string, string> = {
+    trim: "Trim",
+    series: "Series",
+    body_style: "Body style",
+    engine: "Engine",
+    transmission: "Transmission",
+    fuel_type: "Fuel",
+    drivetrain: "Drivetrain",
+    vehicle_type: "Vehicle type",
+    exterior_color: "Exterior color",
+    interior_color: "Interior color",
+    cylinders: "Cylinders"
+  };
+  for (const [key, label] of Object.entries(specLabels)) {
+    const value = lot.auction_specs?.[key];
+    if (value !== null && value !== undefined && value !== "") rows.push([label, String(value)]);
+  }
+  return rows.filter(([, value]) => value !== "-");
+}
+
 async function readApiError(response: Response, fallback: string): Promise<string> {
   try {
     const json = (await response.json()) as { detail?: unknown };
@@ -251,6 +294,7 @@ export default function SearchPage() {
   }, [activeLot?.hammer_price_usd, toolForm]);
 
   const riskAssessment = useMemo(() => assessVehicleRisk(vehicle, activeLot), [vehicle, activeLot]);
+  const auctionSpecRows = useMemo(() => buildAuctionSpecRows(activeLot), [activeLot]);
 
   const riskReasonText = useMemo(() => {
     if (!riskAssessment) return [];
@@ -655,6 +699,18 @@ export default function SearchPage() {
                       <dt>{dict.search.location}</dt>
                       <dd>{activeLot.location || "-"}</dd>
                     </div>
+                    {activeLot.primary_damage && (
+                      <div>
+                        <dt>Damage</dt>
+                        <dd>{activeLot.primary_damage}</dd>
+                      </div>
+                    )}
+                    {activeLot.odometer && (
+                      <div>
+                        <dt>Odometer</dt>
+                        <dd>{activeLot.odometer.toLocaleString("en-US")} mi</dd>
+                      </div>
+                    )}
                   </dl>
                 ) : (
                   <p className="lead muted">{dict.search.noLots}</p>
@@ -662,6 +718,25 @@ export default function SearchPage() {
               </section>
             </div>
           </section>
+
+          {auctionSpecRows.length > 0 && (
+            <section className="panel auctionSpecsPanel">
+              <div className="sectionHead">
+                <div>
+                  <h2>{dict.search.auctionSpecs.title}</h2>
+                  <p className="muted">{dict.search.auctionSpecs.lead}</p>
+                </div>
+              </div>
+              <dl className="auctionSpecsGrid">
+                {auctionSpecRows.map(([label, value]) => (
+                  <div key={`${label}-${value}`}>
+                    <dt>{label}</dt>
+                    <dd>{value}</dd>
+                  </div>
+                ))}
+              </dl>
+            </section>
+          )}
 
           <section className="panel timelinePanelUltra">
             <div className="sectionHead">

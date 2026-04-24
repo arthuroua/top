@@ -574,6 +574,41 @@ select:focus {
   font-weight: 600;
 }
 
+.auctionSpecsPanel {
+  border-color: rgba(217, 164, 65, 0.34);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 251, 255, 0.94)),
+    radial-gradient(520px 210px at 100% 0%, rgba(217, 164, 65, 0.16), transparent 62%);
+}
+
+.auctionSpecsGrid {
+  margin: 16px 0 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.auctionSpecsGrid div {
+  min-width: 0;
+  border: 1px solid rgba(27, 79, 153, 0.1);
+  border-radius: 12px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.78);
+}
+
+.auctionSpecsGrid dt {
+  color: var(--muted);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+}
+
+.auctionSpecsGrid dd {
+  margin: 6px 0 0;
+  color: var(--text);
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
 .sectionHead {
   display: flex;
   align-items: baseline;
@@ -1242,6 +1277,7 @@ select:focus {
 
   .riskGrid,
   .riskReasons,
+  .auctionSpecsGrid,
   .marketSummaryGrid,
   .marketCompList,
   .watchlistGrid,

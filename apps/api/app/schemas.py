@@ -1,7 +1,7 @@
 ﻿from datetime import date, datetime
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
-from typing import Literal
 
 
 class SearchResult(BaseModel):
@@ -42,6 +42,13 @@ class LotItem(BaseModel):
     hammer_price_usd: int | None = None
     status: str | None = None
     location: str | None = None
+    title_brand: str | None = None
+    primary_damage: str | None = None
+    secondary_damage: str | None = None
+    odometer: int | None = None
+    run_and_drive: bool | None = None
+    keys_present: bool | None = None
+    auction_specs: dict[str, str | int | float | bool | None] = Field(default_factory=dict)
     images: list[LotImageItem] = Field(default_factory=list)
     price_events: list[PriceEventItem] = Field(default_factory=list)
 
@@ -244,16 +251,55 @@ class IngestionPriceEvent(BaseModel):
     event_time: datetime
 
 
+MarketProviderCode = Literal["copart", "iaai"]
+IngestionAttributeValue = str | int | float | bool | None
+
+
 class IngestionJobPayload(BaseModel):
+    provider: MarketProviderCode | None = None
     source: str = Field(min_length=1, max_length=16)
     vin: str = Field(min_length=17, max_length=17)
     lot_number: str = Field(min_length=1, max_length=32)
+    source_record_id: str | None = Field(default=None, max_length=128)
+    source_url: str | None = Field(default=None, max_length=1024)
     sale_date: date | None = None
     hammer_price_usd: int | None = Field(default=None, ge=0)
     status: str | None = Field(default=None, max_length=32)
     location: str | None = Field(default=None, max_length=128)
+    title_brand: str | None = Field(default=None, max_length=128)
+    primary_damage: str | None = Field(default=None, max_length=128)
+    secondary_damage: str | None = Field(default=None, max_length=128)
+    odometer: int | None = Field(default=None, ge=0)
+    run_and_drive: bool | None = None
+    keys_present: bool | None = None
+    make: str | None = Field(default=None, max_length=64)
+    model: str | None = Field(default=None, max_length=64)
+    year: int | None = Field(default=None, ge=1900, le=2100)
+    trim: str | None = Field(default=None, max_length=128)
+    series: str | None = Field(default=None, max_length=128)
+    body_style: str | None = Field(default=None, max_length=128)
+    engine: str | None = Field(default=None, max_length=128)
+    transmission: str | None = Field(default=None, max_length=128)
+    fuel_type: str | None = Field(default=None, max_length=64)
+    drivetrain: str | None = Field(default=None, max_length=64)
+    vehicle_type: str | None = Field(default=None, max_length=128)
+    exterior_color: str | None = Field(default=None, max_length=64)
+    interior_color: str | None = Field(default=None, max_length=64)
+    cylinders: int | None = Field(default=None, ge=0)
     images: list[str] = Field(default_factory=list)
     price_events: list[IngestionPriceEvent] = Field(default_factory=list)
+    attributes: dict[str, IngestionAttributeValue] = Field(default_factory=dict)
+
+    @model_validator(mode="after")
+    def normalize_provider_source(self) -> "IngestionJobPayload":
+        inferred = (self.provider or self.source).strip().lower()
+        if inferred not in {"copart", "iaai"}:
+            raise ValueError("source/provider must be either 'copart' or 'iaai'")
+        self.provider = inferred
+        self.source = inferred
+        self.vin = self.vin.upper()
+        self.lot_number = self.lot_number.upper()
+        return self
 
 
 class IngestionConnectorStatus(BaseModel):
@@ -327,16 +373,40 @@ class IngestionImportSnapshotRead(BaseModel):
 
     id: str
     lot_id: str
+    provider: MarketProviderCode | None = None
     source: str
     lot_number: str
     vin: str
+    source_record_id: str | None = None
+    source_url: str | None = None
     sale_date: date | None = None
     hammer_price_usd: int | None = None
     status: str | None = None
     location: str | None = None
+    title_brand: str | None = None
+    primary_damage: str | None = None
+    secondary_damage: str | None = None
+    odometer: int | None = None
+    run_and_drive: bool | None = None
+    keys_present: bool | None = None
+    make: str | None = None
+    model: str | None = None
+    year: int | None = None
+    trim: str | None = None
+    series: str | None = None
+    body_style: str | None = None
+    engine: str | None = None
+    transmission: str | None = None
+    fuel_type: str | None = None
+    drivetrain: str | None = None
+    vehicle_type: str | None = None
+    exterior_color: str | None = None
+    interior_color: str | None = None
+    cylinders: int | None = None
     images: list[str] = Field(default_factory=list)
     price_events: list[IngestionPriceEvent] = Field(default_factory=list)
-    payload: dict = Field(default_factory=dict)
+    attributes: dict[str, Any] = Field(default_factory=dict)
+    payload: dict[str, Any] = Field(default_factory=dict)
     imported_at: datetime
 
 

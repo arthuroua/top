@@ -21,6 +21,26 @@ def _is_direct_image_url(url: str) -> bool:
 def _to_lot_item(lot: Lot) -> LotItem:
     images = sorted(lot.images, key=lambda item: ((item.shot_order is None), (item.shot_order or 0), item.created_at))
     events = sorted(lot.price_events, key=lambda item: item.event_time, reverse=True)
+    latest_snapshot = max(lot.import_snapshots, key=lambda item: item.imported_at, default=None)
+    payload = latest_snapshot.payload_json if latest_snapshot else {}
+    auction_specs = {
+        key: value
+        for key, value in {
+            "trim": payload.get("trim"),
+            "series": payload.get("series"),
+            "body_style": payload.get("body_style"),
+            "engine": payload.get("engine"),
+            "transmission": payload.get("transmission"),
+            "fuel_type": payload.get("fuel_type"),
+            "drivetrain": payload.get("drivetrain"),
+            "vehicle_type": payload.get("vehicle_type"),
+            "exterior_color": payload.get("exterior_color"),
+            "interior_color": payload.get("interior_color"),
+            "cylinders": payload.get("cylinders"),
+            **(payload.get("attributes") or {}),
+        }.items()
+        if value not in (None, "")
+    }
 
     if hide_data_source():
         safe_images: list[LotImageItem] = []
@@ -51,6 +71,13 @@ def _to_lot_item(lot: Lot) -> LotItem:
         hammer_price_usd=lot.hammer_price_usd,
         status=lot.status,
         location=lot.location,
+        title_brand=payload.get("title_brand"),
+        primary_damage=payload.get("primary_damage"),
+        secondary_damage=payload.get("secondary_damage"),
+        odometer=payload.get("odometer"),
+        run_and_drive=payload.get("run_and_drive"),
+        keys_present=payload.get("keys_present"),
+        auction_specs=auction_specs,
         images=safe_images,
         price_events=[
             PriceEventItem(
@@ -73,7 +100,7 @@ def get_vehicle(vin: str, db: Session = Depends(get_db)) -> VehicleCard:
         lots = (
             db.execute(
                 select(Lot)
-                .options(selectinload(Lot.images), selectinload(Lot.price_events))
+                .options(selectinload(Lot.images), selectinload(Lot.price_events), selectinload(Lot.import_snapshots))
                 .where(Lot.vin == vin_key)
                 .order_by(Lot.sale_date.desc(), Lot.fetched_at.desc())
             )

@@ -116,6 +116,18 @@ def _parse_money_to_int(value: Any) -> int | None:
     return int(round(parsed))
 
 
+def _parse_int(value: Any) -> int | None:
+    if value is None:
+        return None
+    raw = str(value).strip().replace(",", "")
+    if not raw:
+        return None
+    try:
+        return int(float(raw))
+    except ValueError:
+        return None
+
+
 def _parse_sale_date(value: Any) -> date | None:
     if value is None:
         return None
@@ -207,16 +219,44 @@ def _to_job(row: dict[str, str]) -> IngestionJobPayload | None:
 
     status = str(row.get("Sale Status") or "").strip() or None
 
+    source_url = str(row.get("Link") or row.get("URL") or "").strip() or None
+
+    attributes = {
+        "auction_phase": str(row.get("Auction Date Type") or "").strip() or None,
+        "sale_status_label": status,
+        "currency": "USD",
+    }
+    attributes = {key: value for key, value in attributes.items() if value is not None}
+
     return IngestionJobPayload(
-        source="Copart",
+        provider="copart",
+        source="copart",
         vin=vin,
         lot_number=lot_number,
+        source_record_id=f"copart:{lot_number}",
+        source_url=source_url,
         sale_date=_parse_sale_date(row.get("Sale Date M/D/CY")),
         hammer_price_usd=hammer_price,
         status=status[:32] if status else None,
         location=location[:128] if location else None,
+        title_brand=(str(row.get("Sale Title State") or "").strip() or None),
+        primary_damage=(str(row.get("Damage Description") or "").strip() or None),
+        odometer=_parse_money_to_int(row.get("Odometer")),
+        make=(str(row.get("Make") or "").strip() or None),
+        model=(str(row.get("Model") or "").strip() or None),
+        year=_parse_int(row.get("Year")),
+        trim=(str(row.get("Trim") or "").strip() or None),
+        body_style=(str(row.get("Body Style") or "").strip() or None),
+        engine=(str(row.get("Engine") or "").strip() or None),
+        transmission=(str(row.get("Transmission") or "").strip() or None),
+        fuel_type=(str(row.get("Fuel") or row.get("Fuel Type") or "").strip() or None),
+        drivetrain=(str(row.get("Drive") or row.get("Drive Train") or "").strip() or None),
+        vehicle_type=(str(row.get("Vehicle Type") or "").strip() or None),
+        exterior_color=(str(row.get("Color") or "").strip() or None),
+        cylinders=_parse_int(row.get("Cylinders")),
         images=images,
         price_events=price_events,
+        attributes=attributes,
     )
 
 

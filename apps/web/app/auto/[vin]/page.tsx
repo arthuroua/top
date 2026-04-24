@@ -20,6 +20,13 @@ type LotResponse = {
   hammer_price_usd: number | null;
   status: string | null;
   location: string | null;
+  title_brand: string | null;
+  primary_damage: string | null;
+  secondary_damage: string | null;
+  odometer: number | null;
+  run_and_drive: boolean | null;
+  keys_present: boolean | null;
+  auction_specs: Record<string, string | number | boolean | null>;
   images: Array<{
     image_url: string;
     shot_order: number | null;
@@ -160,6 +167,42 @@ function collectImages(lots: LotResponse[]): string[] {
   return urls;
 }
 
+function toYesNo(value: boolean | null | undefined): string {
+  if (value === true) return "Yes";
+  if (value === false) return "No";
+  return "-";
+}
+
+function buildAuctionSpecRows(lot: LotResponse | null | undefined): Array<[string, string]> {
+  if (!lot) return [];
+  const rows: Array<[string, string]> = [
+    ["Title", lot.title_brand || "-"],
+    ["Primary damage", lot.primary_damage || "-"],
+    ["Secondary damage", lot.secondary_damage || "-"],
+    ["Odometer", lot.odometer ? `${lot.odometer.toLocaleString("en-US")} mi` : "-"],
+    ["Run & drive", toYesNo(lot.run_and_drive)],
+    ["Keys", toYesNo(lot.keys_present)]
+  ];
+  const specLabels: Record<string, string> = {
+    trim: "Trim",
+    series: "Series",
+    body_style: "Body style",
+    engine: "Engine",
+    transmission: "Transmission",
+    fuel_type: "Fuel",
+    drivetrain: "Drivetrain",
+    vehicle_type: "Vehicle type",
+    exterior_color: "Exterior color",
+    interior_color: "Interior color",
+    cylinders: "Cylinders"
+  };
+  for (const [key, label] of Object.entries(specLabels)) {
+    const value = lot.auction_specs?.[key];
+    if (value !== null && value !== undefined && value !== "") rows.push([label, String(value)]);
+  }
+  return rows.filter(([, value]) => value !== "-");
+}
+
 async function safeJsonFetch<T>(url: string, revalidate: number): Promise<T | null> {
   try {
     const response = await fetch(url, { next: { revalidate } });
@@ -246,6 +289,7 @@ export default async function AutoSeoPage({ params }: PageProps) {
   const lots = vehicle.lots || [];
   const images = collectImages(lots);
   const latestLot = lots[0];
+  const auctionSpecRows = buildAuctionSpecRows(latestLot);
   const latestLotImages = latestLot ? collectImages([latestLot]).slice(0, 6) : [];
   const relatedClusterHref =
     vehicle.make && vehicle.model && vehicle.year
@@ -449,6 +493,20 @@ export default async function AutoSeoPage({ params }: PageProps) {
                 <h3>{latestLot.status || "-"}</h3>
                 <p>{dict.auto.images}: {latestLotImages.length}</p>
               </div>
+              {latestLot.primary_damage && (
+                <div className="spotlightFactCard">
+                  <p className="label">Damage</p>
+                  <h3>{latestLot.primary_damage}</h3>
+                  <p>{latestLot.secondary_damage || "-"}</p>
+                </div>
+              )}
+              {latestLot.odometer && (
+                <div className="spotlightFactCard">
+                  <p className="label">Odometer</p>
+                  <h3>{latestLot.odometer.toLocaleString("en-US")} mi</h3>
+                  <p>Run & drive: {toYesNo(latestLot.run_and_drive)}</p>
+                </div>
+              )}
             </div>
           </div>
         </section>
@@ -461,6 +519,25 @@ export default async function AutoSeoPage({ params }: PageProps) {
           Status: {latestLot?.status || "-"}. Sale date: {latestLot?.sale_date || "-"}. Location: {latestLot?.location || "-"}.
         </p>
       </section>
+
+      {auctionSpecRows.length > 0 && (
+        <section className="panel auctionSpecsPanel">
+          <div className="sectionHead">
+            <div>
+              <h2>{dict.search.auctionSpecs.title}</h2>
+              <p className="muted">{dict.search.auctionSpecs.lead}</p>
+            </div>
+          </div>
+          <dl className="auctionSpecsGrid">
+            {auctionSpecRows.map(([label, value]) => (
+              <div key={`${label}-${value}`}>
+                <dt>{label}</dt>
+                <dd>{value}</dd>
+              </div>
+            ))}
+          </dl>
+        </section>
+      )}
 
       {riskAssessment && riskText && (
         <section className="panel riskPanel">

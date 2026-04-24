@@ -94,10 +94,6 @@ def _runtime_config(provider: Provider) -> ConnectorRuntimeConfig:
     )
 
 
-def _provider_label(provider: Provider) -> str:
-    return "Copart" if provider == "copart" else "IAAI"
-
-
 def _seed_int(provider: Provider, vin: str, lot_number: str) -> int:
     key = f"{provider}:{vin}:{lot_number}"
     digest = hashlib.sha1(key.encode("utf-8")).hexdigest()
@@ -140,18 +136,39 @@ def _mock_job(provider: Provider, vin: str | None, lot_number: str | None) -> In
     )
 
     return IngestionJobPayload(
-        source=_provider_label(provider),
+        provider=provider,
+        source=provider,
         vin=vin_value,
         lot_number=lot_value,
+        source_record_id=f"{provider}:{lot_value}",
+        source_url=f"https://example.invalid/{provider}/lot/{lot_value}",
         sale_date=date.today(),
         hammer_price_usd=hammer_price,
         status=status,
         location=location,
+        make="Tesla" if provider == "iaai" else "Honda",
+        model="Model 3" if provider == "iaai" else "Accord",
+        year=2022 if provider == "iaai" else 2018,
+        trim="Long Range" if provider == "iaai" else "EX-L",
+        body_style="Sedan",
+        engine="Electric" if provider == "iaai" else "1.5L I4",
+        transmission="Automatic",
+        fuel_type="Electric" if provider == "iaai" else "Gasoline",
+        drivetrain="AWD" if provider == "iaai" else "FWD",
+        exterior_color="White",
+        primary_damage="Front End" if provider == "copart" else "Rear",
+        secondary_damage="Minor Dents / Scratches",
+        run_and_drive=True,
+        keys_present=(seed % 2 == 0),
         images=[
             f"https://cdn.example.com/{provider}/{lot_value}/1.jpg",
             f"https://cdn.example.com/{provider}/{lot_value}/2.jpg",
         ],
         price_events=[event],
+        attributes={
+            "connector_mode": "mock",
+            "discovery_channel": "seeded",
+        },
     )
 
 
@@ -472,6 +489,26 @@ def _map_official_payload(
     status = _first_value(record, ["status", "saleStatus", "state"]) or "Unknown"
     location = _first_value(record, ["location", "yard", "branch", "saleLocation"])
     sale_date_value = _parse_date(_first_value(record, ["sale_date", "saleDate", "closeDate", "auctionDate"]))
+    make = _first_value(record, ["make", "vehicle.make", "manufacturer"])
+    model = _first_value(record, ["model", "vehicle.model"])
+    year = _to_int(_first_value(record, ["year", "vehicle.year", "modelYear"]))
+    trim = _first_value(record, ["trim", "vehicle.trim"])
+    series = _first_value(record, ["series", "vehicle.series"])
+    body_style = _first_value(record, ["body_style", "bodyStyle", "vehicle.bodyStyle"])
+    engine = _first_value(record, ["engine", "engineDescription", "vehicle.engine"])
+    transmission = _first_value(record, ["transmission", "vehicle.transmission"])
+    fuel_type = _first_value(record, ["fuel_type", "fuelType", "vehicle.fuelType"])
+    drivetrain = _first_value(record, ["drivetrain", "drive", "driveType", "vehicle.drivetrain"])
+    vehicle_type = _first_value(record, ["vehicle_type", "vehicleType", "listingType"])
+    exterior_color = _first_value(record, ["exterior_color", "color", "exteriorColor"])
+    interior_color = _first_value(record, ["interior_color", "interiorColor"])
+    cylinders = _to_int(_first_value(record, ["cylinders", "engineCylinders"]))
+    title_brand = _first_value(record, ["title_brand", "titleBrand", "title", "documentType"])
+    primary_damage = _first_value(record, ["primary_damage", "primaryDamage", "damage.primary", "damageType"])
+    secondary_damage = _first_value(record, ["secondary_damage", "secondaryDamage", "damage.secondary"])
+    odometer = _to_int(_first_value(record, ["odometer", "odometerReading", "mileage"]))
+    run_and_drive = _first_value(record, ["run_and_drive", "runAndDrive", "starts", "canRun"])
+    keys_present = _first_value(record, ["keys_present", "keysPresent", "hasKeys"])
 
     images_value = _first_value(record, ["images", "photoUrls", "photos", "media.images"])
     events_value = _first_value(record, ["price_events", "events", "timeline", "history"])
@@ -479,20 +516,53 @@ def _map_official_payload(
     images = _normalize_images(images_value)
     events = _normalize_events(events_value, hammer_price)
 
+    source_record_id = str(
+        _first_value(record, ["id", "record_id", "lot_id", "lot.id", "lotNumber", "lot_number"]) or lot_value
+    )
+    source_url = _first_value(record, ["url", "source_url", "lotUrl", "links.self"])
+
+    attributes: dict[str, Any] = {
+        "connector_mode": "official",
+        "sale_document": _first_value(record, ["documentType", "saleDocument"]),
+        "branch_code": _first_value(record, ["branchCode", "yardCode"]),
+        "currency": _first_value(record, ["currency", "priceCurrency"]),
+    }
+    attributes = {key: value for key, value in attributes.items() if value is not None}
+
     job = IngestionJobPayload(
-        source=_provider_label(provider),
+        provider=provider,
+        source=provider,
         vin=vin_value,
         lot_number=lot_value,
+        source_record_id=source_record_id,
+        source_url=str(source_url)[:1024] if source_url is not None else None,
         sale_date=sale_date_value,
         hammer_price_usd=hammer_price,
         status=str(status)[:32] if status is not None else None,
         location=str(location)[:128] if location is not None else None,
+        make=str(make)[:64] if make is not None else None,
+        model=str(model)[:64] if model is not None else None,
+        year=year,
+        trim=str(trim)[:128] if trim is not None else None,
+        series=str(series)[:128] if series is not None else None,
+        body_style=str(body_style)[:128] if body_style is not None else None,
+        engine=str(engine)[:128] if engine is not None else None,
+        transmission=str(transmission)[:128] if transmission is not None else None,
+        fuel_type=str(fuel_type)[:64] if fuel_type is not None else None,
+        drivetrain=str(drivetrain)[:64] if drivetrain is not None else None,
+        vehicle_type=str(vehicle_type)[:128] if vehicle_type is not None else None,
+        exterior_color=str(exterior_color)[:64] if exterior_color is not None else None,
+        interior_color=str(interior_color)[:64] if interior_color is not None else None,
+        cylinders=cylinders,
+        title_brand=str(title_brand)[:128] if title_brand is not None else None,
+        primary_damage=str(primary_damage)[:128] if primary_damage is not None else None,
+        secondary_damage=str(secondary_damage)[:128] if secondary_damage is not None else None,
+        odometer=odometer,
+        run_and_drive=bool(run_and_drive) if isinstance(run_and_drive, bool) else None,
+        keys_present=bool(keys_present) if isinstance(keys_present, bool) else None,
         images=images,
         price_events=events,
-    )
-
-    source_record_id = str(
-        _first_value(record, ["id", "record_id", "lot_id", "lot.id", "lotNumber", "lot_number"]) or lot_value
+        attributes=attributes,
     )
 
     return source_record_id, job
