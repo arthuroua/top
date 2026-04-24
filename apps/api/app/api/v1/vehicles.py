@@ -8,7 +8,7 @@ from app.core.privacy import hide_data_source, public_source_label
 from app.data.mock_data import MOCK_VEHICLES
 from app.db import get_db
 from app.models import Lot, Vehicle
-from app.schemas import LotImageItem, LotItem, PriceEventItem, VehicleCard
+from app.schemas import LotImageItem, LotItem, PriceEventItem, RecentVehicleItem, RecentVehiclesResponse, VehicleCard
 
 router = APIRouter(prefix="/api/v1", tags=["vehicles"])
 
@@ -88,6 +88,51 @@ def _to_lot_item(lot: Lot) -> LotItem:
             )
             for event in events
         ],
+    )
+
+
+def _first_safe_image(lot: Lot) -> str | None:
+    images = sorted(lot.images, key=lambda item: ((item.shot_order is None), (item.shot_order or 0), item.created_at))
+    for index, image in enumerate(images):
+        if not _is_direct_image_url(image.image_url):
+            continue
+        if hide_data_source():
+            return f"/api/v1/media/vehicles/{lot.vin}/lots/{lot.lot_number}/images/{index}"
+        return image.image_url
+    return None
+
+
+@router.get("/vehicles/recent", response_model=RecentVehiclesResponse)
+def list_recent_vehicles(limit: int = 12, db: Session = Depends(get_db)) -> RecentVehiclesResponse:
+    safe_limit = min(max(limit, 1), 24)
+    lots = (
+        db.execute(
+            select(Lot)
+            .options(selectinload(Lot.images), selectinload(Lot.vehicle))
+            .order_by(Lot.fetched_at.desc(), Lot.sale_date.desc())
+            .limit(safe_limit)
+        )
+        .scalars()
+        .all()
+    )
+    return RecentVehiclesResponse(
+        items=[
+            RecentVehicleItem(
+                vin=lot.vin,
+                make=lot.vehicle.make if lot.vehicle else None,
+                model=lot.vehicle.model if lot.vehicle else None,
+                year=lot.vehicle.year if lot.vehicle else None,
+                title_brand=lot.vehicle.title_brand if lot.vehicle else None,
+                lot_number=lot.lot_number,
+                sale_date=lot.sale_date.isoformat() if lot.sale_date else None,
+                hammer_price_usd=lot.hammer_price_usd,
+                status=lot.status,
+                location=lot.location,
+                image_url=_first_safe_image(lot),
+                updated_at=lot.fetched_at,
+            )
+            for lot in lots
+        ]
     )
 
 

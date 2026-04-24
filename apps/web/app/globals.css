@@ -147,6 +147,159 @@ a {
   gap: 18px;
 }
 
+.homeSimpleShell {
+  gap: 28px;
+}
+
+.homeSearchBand {
+  display: grid;
+  gap: 18px;
+  padding: 28px 0 10px;
+}
+
+.homeSearchCopy h1 {
+  margin-top: 12px;
+  max-width: 13ch;
+  font-size: clamp(2.4rem, 6vw, 5.4rem);
+}
+
+.homeSearchCopy .lead {
+  margin-top: 12px;
+  max-width: 60ch;
+  font-size: 1.08rem;
+}
+
+.homeSearchForm {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid rgba(27, 79, 153, 0.14);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.86);
+  box-shadow: var(--shadow);
+}
+
+.homeSearchForm input {
+  width: 100%;
+  min-height: 54px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 0 16px;
+  color: var(--text);
+  background: #fff;
+  font: inherit;
+}
+
+.recentVehiclesSection {
+  display: grid;
+  gap: 16px;
+}
+
+.recentVehiclesGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.recentVehicleCard {
+  overflow: hidden;
+  display: grid;
+  min-width: 0;
+  text-decoration: none;
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 16px 34px rgba(16, 31, 51, 0.09);
+  transition: transform 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
+}
+
+.recentVehicleCard:hover {
+  transform: translateY(-2px);
+  border-color: rgba(25, 135, 84, 0.36);
+  box-shadow: 0 22px 42px rgba(16, 31, 51, 0.13);
+}
+
+.recentVehicleImage {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 16 / 10;
+  background: linear-gradient(180deg, #e7eef7, #f7f9fc);
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.recentVehicleImage img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.recentVehicleBody {
+  display: grid;
+  gap: 9px;
+  padding: 14px;
+}
+
+.recentVehicleBody h3 {
+  font-size: 1.1rem;
+}
+
+.recentPrice {
+  display: grid;
+  gap: 3px;
+  padding: 12px;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #f3fff8, #e9f9f0);
+  border: 1px solid rgba(25, 135, 84, 0.22);
+}
+
+.recentPrice span {
+  color: #23714a;
+  font-family: var(--font-mono), Consolas, monospace;
+  font-size: 0.76rem;
+  text-transform: uppercase;
+}
+
+.recentPrice strong {
+  color: #118047;
+  font-size: 1.9rem;
+  line-height: 1;
+}
+
+.recentMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.recentMeta span {
+  padding: 6px 8px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+  font-size: 0.78rem;
+}
+
+.recentEmpty {
+  display: grid;
+  justify-items: start;
+  gap: 10px;
+  border: 1px dashed var(--line-strong);
+  border-radius: 16px;
+  padding: 24px;
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.recentVehicleSkeleton {
+  min-height: 330px;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.74), rgba(230, 238, 248, 0.92), rgba(255, 255, 255, 0.74));
+  background-size: 220% 100%;
+  animation: skeletonSweep 1.2s linear infinite;
+}
+
 .panel {
   border: 1px solid var(--line);
   border-radius: 24px;
@@ -1277,6 +1430,15 @@ select:focus {
   }
 }
 
+@keyframes skeletonSweep {
+  0% {
+    background-position: 120% 0;
+  }
+  100% {
+    background-position: -120% 0;
+  }
+}
+
 @media (max-width: 980px) {
   .heroFrame,
   .showcaseGrid,
@@ -1316,6 +1478,7 @@ select:focus {
   .auctionSpecsGrid,
   .marketSummaryGrid,
   .marketCompList,
+  .recentVehiclesGrid,
   .watchlistGrid,
   .watchlistFacts,
   .contactGrid {
@@ -1354,6 +1517,10 @@ select:focus {
 
   .vehicleHeader {
     align-items: stretch;
+  }
+
+  .homeSearchForm {
+    grid-template-columns: 1fr;
   }
 
   .vehicleHeader > div:last-child {

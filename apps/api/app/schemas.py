@@ -62,6 +62,25 @@ class VehicleCard(BaseModel):
     lots: list[LotItem]
 
 
+class RecentVehicleItem(BaseModel):
+    vin: str
+    make: str | None = None
+    model: str | None = None
+    year: int | None = None
+    title_brand: str | None = None
+    lot_number: str
+    sale_date: str | None = None
+    hammer_price_usd: int | None = None
+    status: str | None = None
+    location: str | None = None
+    image_url: str | None = None
+    updated_at: datetime
+
+
+class RecentVehiclesResponse(BaseModel):
+    items: list[RecentVehicleItem]
+
+
 class VinDecodeItem(BaseModel):
     key: str
     label: str
