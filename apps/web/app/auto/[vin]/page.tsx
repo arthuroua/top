@@ -104,6 +104,8 @@ type PageProps = {
   params: Promise<{ vin: string }>;
 };
 
+type Dictionary = Awaited<ReturnType<typeof getServerDictionary>>["dict"];
+
 const apiPublicBase = "/api/backend";
 const apiInternalBase = process.env.API_INTERNAL_BASE_URL || apiPublicBase;
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
@@ -130,6 +132,35 @@ function toMoney(value: number | null | undefined): string {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(
     value
   );
+}
+
+function isSoldStatus(status: string | null | undefined): boolean {
+  const normalized = (status || "").toLowerCase();
+  return normalized.includes("sold") || normalized.includes("closed");
+}
+
+function lotPriceLabel(lot: LotResponse | null | undefined, dict: Dictionary): string {
+  if (!lot) return dict.search.kpiStatus;
+  if (lot.hammer_price_usd && isSoldStatus(lot.status)) return dict.search.boughtFor;
+  if (lot.hammer_price_usd) return dict.search.stats.currentBid;
+  return dict.search.kpiStatus;
+}
+
+function lotPriceValue(lot: LotResponse | null | undefined): string {
+  if (!lot) return "-";
+  if (lot.hammer_price_usd) return toMoney(lot.hammer_price_usd);
+  return lot.status || "-";
+}
+
+function historyPriceLabel(item: HistorySnapshot, dict: Dictionary): string {
+  if (item.hammer_price_usd && isSoldStatus(item.status)) return dict.search.boughtFor;
+  if (item.hammer_price_usd) return dict.search.stats.currentBid;
+  return dict.search.kpiStatus;
+}
+
+function historyPriceValue(item: HistorySnapshot): string {
+  if (item.hammer_price_usd) return toMoney(item.hammer_price_usd);
+  return item.status || "-";
 }
 
 function toDate(value: string | null | undefined): string {
@@ -419,8 +450,8 @@ export default async function AutoSeoPage({ params }: PageProps) {
             <strong>{vin}</strong>
           </div>
           <div>
-            <p className="label">{dict.search.finalBid}</p>
-            <strong>{toMoney(latestLot?.hammer_price_usd)}</strong>
+            <p className="label">{lotPriceLabel(latestLot, dict)}</p>
+            <strong>{lotPriceValue(latestLot)}</strong>
           </div>
           <div>
             <p className="label">{dict.search.market.lowerBound}</p>
@@ -474,8 +505,8 @@ export default async function AutoSeoPage({ params }: PageProps) {
             </div>
             <div className="lotSpotlightFacts">
               <div className="purchasePriceHero spotlightPriceHero">
-                <p>{dict.search.boughtFor}</p>
-                <strong>{toMoney(latestLot.hammer_price_usd)}</strong>
+                <p>{lotPriceLabel(latestLot, dict)}</p>
+                <strong>{lotPriceValue(latestLot)}</strong>
                 <span>
                   #{latestLot.lot_number} · {latestLot.status || "-"}
                 </span>
@@ -673,7 +704,8 @@ export default async function AutoSeoPage({ params }: PageProps) {
                   <p className="label">
                     {lot.source} #{lot.lot_number}
                   </p>
-                  <h3>{toMoney(lot.hammer_price_usd)}</h3>
+                  <h3>{lotPriceValue(lot)}</h3>
+                  <p>{lotPriceLabel(lot, dict)}</p>
                   <p>Status: {lot.status || "-"}</p>
                   <p>Date: {lot.sale_date || "-"}</p>
                   <p>Location: {lot.location || "-"}</p>
@@ -714,7 +746,9 @@ export default async function AutoSeoPage({ params }: PageProps) {
                 </p>
                 <h3>{toDate(item.imported_at)}</h3>
                 <p>Status: {item.status || "-"}</p>
-                <p>Price: {toMoney(item.hammer_price_usd)}</p>
+                <p>
+                  {historyPriceLabel(item, dict)}: {historyPriceValue(item)}
+                </p>
               </article>
             ))}
           </div>

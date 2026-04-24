@@ -81,6 +81,11 @@ type HistoryPage = {
   has_next: boolean;
 };
 
+type PriceLike = {
+  hammer_price_usd: number | null;
+  status: string | null;
+};
+
 type ToolForm = {
   expectedSellUsd: string;
   targetMarginUsd: string;
@@ -202,6 +207,28 @@ function toYesNo(value: boolean | null | undefined): string {
   if (value === true) return "Yes";
   if (value === false) return "No";
   return "-";
+}
+
+function isSoldStatus(status: string | null | undefined): boolean {
+  const normalized = (status || "").toLowerCase();
+  return normalized.includes("sold") || normalized.includes("closed");
+}
+
+function priceLabel(lot: PriceLike | null, dict: ReturnType<typeof useI18n>["dict"]): string {
+  if (!lot) return dict.search.kpiStatus;
+  if (lot.hammer_price_usd && isSoldStatus(lot.status)) return dict.search.boughtFor;
+  if (lot.hammer_price_usd) return dict.search.stats.currentBid;
+  return dict.search.kpiStatus;
+}
+
+function priceValue(lot: PriceLike | null): string {
+  if (!lot) return "-";
+  if (lot.hammer_price_usd) return toMoney(lot.hammer_price_usd, "USD");
+  return lot.status || "-";
+}
+
+function lotPriceLine(lot: LotResponse, dict: ReturnType<typeof useI18n>["dict"]): string {
+  return `${priceLabel(lot, dict)}: ${priceValue(lot)}`;
 }
 
 function buildAuctionSpecRows(lot: LotResponse | null): Array<[string, string]> {
@@ -676,8 +703,8 @@ export default function SearchPage() {
                 {activeLot ? (
                   <>
                     <div className="purchasePriceHero">
-                      <p>{dict.search.boughtFor}</p>
-                      <strong>{toMoney(activeLot.hammer_price_usd, "USD")}</strong>
+                      <p>{priceLabel(activeLot, dict)}</p>
+                      <strong>{priceValue(activeLot)}</strong>
                       <span>
                         #{activeLot.lot_number} · {activeLot.status || "-"}
                       </span>
@@ -762,7 +789,7 @@ export default function SearchPage() {
                     <p className="label">{lot.source}</p>
                     <h3>#{lot.lot_number}</h3>
                     <p>{dict.search.saleDate}: {lot.sale_date || "-"}</p>
-                    <p>{dict.search.finalBid}: {toMoney(lot.hammer_price_usd, "USD")}</p>
+                    <p>{lotPriceLine(lot, dict)}</p>
                     <p>{dict.search.kpiStatus}: {lot.status || "-"}</p>
                     {lot.price_events.length > 0 && (
                       <ul className="miniList">
@@ -796,7 +823,9 @@ export default function SearchPage() {
                     </p>
                     <h3>{toDisplayDate(item.imported_at)}</h3>
                     <p>{dict.search.kpiStatus}: {item.status || "-"}</p>
-                    <p>{dict.search.finalBid}: {toMoney(item.hammer_price_usd, "USD")}</p>
+                    <p>
+                      {priceLabel(item, dict)}: {priceValue(item)}
+                    </p>
                     <p>{dict.search.location}: {item.location || "-"}</p>
                   </article>
                 ))}

@@ -47,6 +47,22 @@ function toDisplayImageUrl(value: string | null): string | null {
   return value;
 }
 
+function isSoldStatus(status: string | null | undefined): boolean {
+  const normalized = (status || "").toLowerCase();
+  return normalized.includes("sold") || normalized.includes("closed");
+}
+
+function getPriceLabel(item: RecentVehicle, dict: ReturnType<typeof useI18n>["dict"]): string {
+  if (item.hammer_price_usd && isSoldStatus(item.status)) return dict.search.boughtFor;
+  if (item.hammer_price_usd) return dict.search.stats.currentBid;
+  return dict.search.kpiStatus;
+}
+
+function getPriceValue(item: RecentVehicle): string {
+  if (item.hammer_price_usd) return toMoney(item.hammer_price_usd);
+  return item.status || "-";
+}
+
 export default function HomePage() {
   const { dict } = useI18n();
   const [query, setQuery] = useState("");
@@ -125,8 +141,8 @@ export default function HomePage() {
                     <p className="label">VIN {item.vin}</p>
                     <h3>{toVehicleName(item)}</h3>
                     <div className="recentPrice">
-                      <span>{dict.search.boughtFor}</span>
-                      <strong>{toMoney(item.hammer_price_usd)}</strong>
+                      <span>{getPriceLabel(item, dict)}</span>
+                      <strong>{getPriceValue(item)}</strong>
                     </div>
                     <div className="recentMeta">
                       <span>#{item.lot_number}</span>
