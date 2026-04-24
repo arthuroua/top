@@ -38,6 +38,20 @@ type IngestionProcessResult = {
   price_events_added: number;
 };
 
+type CopartCsvRunResult = {
+  source: string;
+  downloaded_rows: number;
+  valid_rows: number;
+  enqueued_rows: number;
+  deduped_rows: number;
+  skipped_rows: number;
+  processed_rows: number;
+  queue_depth: number;
+  processing_errors: string[];
+  started_at: string;
+  finished_at: string;
+};
+
 type ConnectorStatus = {
   provider: "copart" | "iaai";
   mode: string;
@@ -126,7 +140,8 @@ const STORAGE_KEYS = {
   autoRefreshEnabled: "ingestion.auto_refresh_enabled",
   autoRefreshSeconds: "ingestion.auto_refresh_seconds",
   audioSignalEnabled: "ingestion.audio_signal_enabled",
-  browserNotificationsEnabled: "ingestion.browser_notifications_enabled"
+  browserNotificationsEnabled: "ingestion.browser_notifications_enabled",
+  adminToken: "ingestion.admin_token"
 } as const;
 
 const DEFAULT_FORM: IngestionForm = {
@@ -238,11 +253,21 @@ export default function IngestionPage() {
   const [loadingEnqueue, setLoadingEnqueue] = useState(false);
   const [loadingDepth, setLoadingDepth] = useState(false);
   const [loadingProcess, setLoadingProcess] = useState(false);
+  const [loadingCopartCsvRun, setLoadingCopartCsvRun] = useState(false);
 
   const [error, setError] = useState("");
   const [enqueueResult, setEnqueueResult] = useState<IngestionEnqueueResponse | null>(null);
   const [depthResult, setDepthResult] = useState<IngestionQueueDepth | null>(null);
   const [processResult, setProcessResult] = useState<IngestionProcessResult | null>(null);
+  const [copartCsvResult, setCopartCsvResult] = useState<CopartCsvRunResult | null>(null);
+  const [adminToken, setAdminToken] = useState<string>(() => {
+    if (typeof window === "undefined") return "";
+    try {
+      return window.localStorage.getItem(STORAGE_KEYS.adminToken) || "";
+    } catch {
+      return "";
+    }
+  });
   const [connectorStatuses, setConnectorStatuses] = useState<ConnectorStatus[]>([]);
   const [loadingConnectorStatus, setLoadingConnectorStatus] = useState(false);
   const [loadingConnectorFetch, setLoadingConnectorFetch] = useState(false);
@@ -389,6 +414,10 @@ export default function IngestionPage() {
   }, [browserNotificationsEnabled]);
 
   useEffect(() => {
+    writeStoredValue(STORAGE_KEYS.adminToken, adminToken);
+  }, [adminToken]);
+
+  useEffect(() => {
     if (notificationPermission === "granted" || notificationPermission === "unsupported") return;
     if (browserNotificationsEnabled) {
       setBrowserNotificationsEnabled(false);
@@ -490,7 +519,8 @@ export default function IngestionPage() {
     setLoadingProcess(true);
     try {
       const res = await fetch(`${API_BASE}/api/v1/ingestion/process-one`, {
-        method: "POST"
+        method: "POST",
+        headers: { "X-Admin-Token": adminToken.trim() }
       });
       if (!res.ok) throw new Error(await readApiError(res, "Failed to process queue"));
       const json = (await res.json()) as IngestionProcessResult;
@@ -499,6 +529,30 @@ export default function IngestionPage() {
       setError(err instanceof Error ? err.message : "Request failed");
     } finally {
       setLoadingProcess(false);
+    }
+  }
+
+  async function runCopartCsvNow() {
+    setError("");
+    setCopartCsvResult(null);
+    setLoadingCopartCsvRun(true);
+    try {
+      const params = new URLSearchParams({
+        process_immediately: "true",
+        max_process: "100"
+      });
+      const res = await fetch(`${API_BASE}/api/v1/ingestion/copart-csv/run-once?${params.toString()}`, {
+        method: "POST",
+        headers: { "X-Admin-Token": adminToken.trim() }
+      });
+      if (!res.ok) throw new Error(await readApiError(res, "Failed to run Copart CSV import"));
+      const json = (await res.json()) as CopartCsvRunResult;
+      setCopartCsvResult(json);
+      await checkQueueDepth();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Request failed");
+    } finally {
+      setLoadingCopartCsvRun(false);
     }
   }
 
@@ -636,7 +690,7 @@ export default function IngestionPage() {
     try {
       const res = await fetch(`${API_BASE}/api/v1/ingestion/fetch-and-enqueue`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "X-Admin-Token": adminToken.trim() },
         body: JSON.stringify({
           provider: connectorForm.provider,
           vin: vin || null,
@@ -702,6 +756,15 @@ export default function IngestionPage() {
         <p className="chip">Ingestion Admin</p>
         <h1>Queue Control</h1>
         <p className="lead">Enqueue lot updates, inspect queue depth, and process ingestion jobs manually.</p>
+        <label className="adminTokenField">
+          Admin token
+          <input
+            value={adminToken}
+            onChange={(event) => setAdminToken(event.target.value)}
+            placeholder="Paste ADMIN_TOKEN from Railway variables"
+            type="password"
+          />
+        </label>
         <div className="actions">
           <Link href="/search" className="button">
             Back to VIN Search
@@ -1037,6 +1100,9 @@ export default function IngestionPage() {
       <section className="panel">
         <h2>Queue Tools</h2>
         <div className="actions">
+          <button type="button" onClick={runCopartCsvNow} disabled={loadingCopartCsvRun || !adminToken.trim()}>
+            {loadingCopartCsvRun ? "Importing Copart CSV" : "Run Copart CSV Now"}
+          </button>
           <button type="button" onClick={checkQueueDepth} disabled={loadingDepth}>
             {loadingDepth ? "Checking" : "Check Queue Depth"}
           </button>
@@ -1049,6 +1115,22 @@ export default function IngestionPage() {
           <div className="panel reportSaved">
             <p className="label">Queue Depth</p>
             <h3>{depthResult.queue_depth}</h3>
+          </div>
+        )}
+
+        {copartCsvResult && (
+          <div className="panel reportSaved">
+            <p className="label">Copart CSV Import</p>
+            <p>Downloaded rows: {copartCsvResult.downloaded_rows}</p>
+            <p>Valid rows: {copartCsvResult.valid_rows}</p>
+            <p>Enqueued rows: {copartCsvResult.enqueued_rows}</p>
+            <p>Processed rows: {copartCsvResult.processed_rows}</p>
+            <p>Deduped rows: {copartCsvResult.deduped_rows}</p>
+            <p>Skipped rows: {copartCsvResult.skipped_rows}</p>
+            <p>Queue depth: {copartCsvResult.queue_depth}</p>
+            {copartCsvResult.processing_errors.length > 0 && (
+              <p>Errors: {copartCsvResult.processing_errors.join(" | ")}</p>
+            )}
           </div>
         )}
 

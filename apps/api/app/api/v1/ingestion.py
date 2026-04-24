@@ -29,6 +29,7 @@ from app.schemas import (
     IngestionQueueDepth,
 )
 from app.services.connectors import connector_statuses, fetch_from_connector
+from app.services.copart_csv import load_copart_csv_config, run_copart_csv_ingestion
 from app.services.ingestion_queue import enqueue_ingestion_job, pop_ingestion_job, queue_depth
 
 router = APIRouter(prefix="/api/v1/ingestion", tags=["ingestion"])
@@ -494,6 +495,58 @@ def get_queue_depth() -> IngestionQueueDepth:
         raise HTTPException(status_code=503, detail=f"Queue unavailable: {exc}") from exc
 
     return IngestionQueueDepth(queue_depth=depth)
+
+
+@router.post("/copart-csv/run-once", dependencies=[Depends(_require_admin)])
+def run_copart_csv_once(
+    process_immediately: bool = Query(default=True),
+    max_process: int = Query(default=100, ge=0, le=1000),
+    db: Session = Depends(get_db),
+) -> dict:
+    try:
+        stats = run_copart_csv_ingestion(load_copart_csv_config())
+    except RedisError as exc:
+        raise HTTPException(status_code=503, detail=f"Queue unavailable: {exc}") from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+    processed = 0
+    processing_errors: list[str] = []
+    if process_immediately and max_process > 0:
+        for _ in range(max_process):
+            try:
+                job = pop_ingestion_job(timeout=1)
+            except RedisError as exc:
+                raise HTTPException(status_code=503, detail=f"Queue unavailable: {exc}") from exc
+            if job is None:
+                break
+            try:
+                apply_ingestion_job(db, job)
+                processed += 1
+            except Exception as exc:  # noqa: BLE001
+                db.rollback()
+                processing_errors.append(str(exc)[:300])
+                if len(processing_errors) >= 5:
+                    break
+
+    try:
+        depth = queue_depth()
+    except RedisError:
+        depth = -1
+
+    return {
+        "source": "copart_csv",
+        "downloaded_rows": stats.total_rows,
+        "valid_rows": stats.valid_rows,
+        "enqueued_rows": stats.enqueued_rows,
+        "deduped_rows": stats.deduped_rows,
+        "skipped_rows": stats.skipped_rows,
+        "processed_rows": processed,
+        "queue_depth": depth,
+        "processing_errors": processing_errors,
+        "started_at": stats.started_at.isoformat(),
+        "finished_at": stats.finished_at.isoformat(),
+    }
 
 
 @router.post("/process-one", response_model=IngestionProcessResult, dependencies=[Depends(_require_admin)])
