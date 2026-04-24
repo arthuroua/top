@@ -1,16 +1,36 @@
 from copy import deepcopy
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.core.privacy import hide_data_source, public_source_label
 from app.data.mock_data import MOCK_VEHICLES
 from app.db import get_db
-from app.models import Lot, Vehicle
+from app.models import Lot, LotImage, Vehicle
 from app.schemas import LotImageItem, LotItem, PriceEventItem, RecentVehicleItem, RecentVehiclesResponse, VehicleCard
 
 router = APIRouter(prefix="/api/v1", tags=["vehicles"])
+
+
+@router.get("/vehicles/stats")
+def get_vehicle_stats(db: Session = Depends(get_db)) -> dict:
+    source_rows = db.execute(select(Lot.source, func.count(Lot.id)).group_by(Lot.source)).all()
+    return {
+        "vehicles": db.scalar(select(func.count(Vehicle.vin))) or 0,
+        "lots": db.scalar(select(func.count(Lot.id))) or 0,
+        "images": db.scalar(select(func.count(LotImage.id))) or 0,
+        "lots_with_price": db.scalar(select(func.count(Lot.id)).where(Lot.hammer_price_usd.is_not(None))) or 0,
+        "lots_with_images": db.scalar(
+            select(func.count(func.distinct(LotImage.lot_id)))
+        )
+        or 0,
+        "sources": {
+            (public_source_label() if hide_data_source() else source): count
+            for source, count in source_rows
+        },
+        "raw_sources": {source: count for source, count in source_rows} if not hide_data_source() else None,
+    }
 
 
 def _is_direct_image_url(url: str) -> bool:
