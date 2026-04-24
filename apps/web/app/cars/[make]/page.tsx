@@ -2,7 +2,14 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { fetchBrandClusters, fetchSeoPageBySlug, readableMakeFromSlug, resolveSeoCopy } from "../../../lib/seoApi";
+import {
+  fetchBrandClusters,
+  fetchBrandModelMenu,
+  fetchSeoPageBySlug,
+  modelPageHref,
+  readableMakeFromSlug,
+  resolveSeoCopy,
+} from "../../../lib/seoApi";
 import { getServerDictionary } from "../../../lib/server-locale";
 
 type PageProps = {
@@ -63,6 +70,7 @@ export default async function BrandPage({ params }: PageProps) {
   const { dict, locale } = await getServerDictionary();
   const make = page.make || readableMakeFromSlug(makeSlug);
   const clusters = await fetchBrandClusters(make);
+  const models = fetchBrandModelMenu(make);
   const copy = resolveSeoCopy(page, locale);
   const faqItems = copy.faq.length > 0 ? copy.faq : buildFaq(make);
 
@@ -141,7 +149,23 @@ export default async function BrandPage({ params }: PageProps) {
       </section>
 
       <section className="panel carsClusterSection">
-        <h2>{dict.cars.modelPages}</h2>
+        <h2>{dict.cars.modelsTitle}</h2>
+        {models.length > 0 ? (
+          <div className="modelMenuGrid">
+            {models.map((model) => (
+              <Link key={`${make}-${model}`} href={modelPageHref(make, model)} className="modelMenuCard">
+                <span>{make}</span>
+                <strong>{model}</strong>
+              </Link>
+            ))}
+          </div>
+        ) : (
+          <p>{dict.cars.noModels}</p>
+        )}
+      </section>
+
+      <section className="panel carsClusterSection">
+        <h2>{dict.cars.popularPages}</h2>
         {clusters.length > 0 ? (
           <div className="carsClusterGrid">
             {clusters.map((cluster) => (

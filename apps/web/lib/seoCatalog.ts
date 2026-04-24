@@ -78,6 +78,45 @@ export function clusterHref(cluster: Pick<SeoCluster, "make" | "model" | "year">
   return `/cars/${slugify(cluster.make)}/${slugify(cluster.model)}/${cluster.year}`;
 }
 
+export type ModelMenuItem = {
+  make: string;
+  models: string[];
+};
+
+export const SEO_MODEL_MENU: ModelMenuItem[] = [
+  { make: "BMW", models: ["X1", "X3", "X5", "X7", "3 Series", "5 Series", "i4", "i7"] },
+  { make: "Audi", models: ["A4", "A6", "Q3", "Q5", "Q7", "e-tron"] },
+  { make: "Mercedes-Benz", models: ["C-Class", "E-Class", "GLA", "GLC", "GLE", "S-Class"] },
+  { make: "Tesla", models: ["Model 3", "Model Y", "Model S", "Model X"] },
+  { make: "Toyota", models: ["Camry", "Corolla", "RAV4", "Highlander", "Prius"] },
+  { make: "Honda", models: ["Accord", "Civic", "CR-V", "Pilot", "Odyssey"] },
+  { make: "Nissan", models: ["Rogue", "Altima", "Sentra", "Leaf", "Murano"] },
+  { make: "Volkswagen", models: ["Passat", "Jetta", "Tiguan", "Atlas", "Golf"] },
+  { make: "Hyundai", models: ["Elantra", "Sonata", "Tucson", "Santa Fe", "Kona"] },
+  { make: "Kia", models: ["Niro", "Sportage", "Sorento", "Optima", "Telluride"] },
+  { make: "Jeep", models: ["Cherokee", "Grand Cherokee", "Compass", "Wrangler", "Renegade"] },
+  { make: "Ford", models: ["Escape", "Fusion", "Explorer", "F-150", "Mustang"] },
+  { make: "Chevrolet", models: ["Bolt EV", "Malibu", "Equinox", "Tahoe", "Silverado"] },
+  { make: "Lexus", models: ["RX", "NX", "ES", "IS", "GX"] },
+  { make: "Mazda", models: ["Mazda3", "Mazda6", "CX-5", "CX-9", "CX-30"] },
+  { make: "Subaru", models: ["Forester", "Outback", "Impreza", "Legacy", "Crosstrek"] }
+];
+
+export function modelHref(make: string, model: string): string {
+  return `/cars/${slugify(make)}/${slugify(model)}`;
+}
+
+export function findModelsForMake(make: string): string[] {
+  return SEO_MODEL_MENU.find((item) => item.make.toLowerCase() === make.toLowerCase())?.models || [];
+}
+
+export function findModelBySlugs(makeSlug: string, modelSlug: string): { make: string; model: string } | null {
+  const makeEntry = SEO_MODEL_MENU.find((item) => slugify(item.make) === makeSlug);
+  if (!makeEntry) return null;
+  const model = makeEntry.models.find((item) => slugify(item) === modelSlug);
+  return model ? { make: makeEntry.make, model } : null;
+}
+
 export function findClusterBySlugs(makeSlug: string, modelSlug: string, year: number): SeoCluster | undefined {
   return SEO_CLUSTERS.find(
     (item) => slugify(item.make) === makeSlug && slugify(item.model) === modelSlug && item.year === year

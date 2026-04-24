@@ -5,7 +5,10 @@ import {
   clusterHref,
   findBrandBySlug,
   findClusterBySlugs,
+  findModelBySlugs,
+  findModelsForMake,
   getBrandClusters,
+  modelHref,
   readableFromSlug,
 } from "./seoCatalog";
 
@@ -194,6 +197,22 @@ export async function fetchBrandClusters(make: string): Promise<SeoPage[]> {
 
 export function readableMakeFromSlug(slug: string): string {
   return findBrandBySlug(slug)?.make || readableFromSlug(slug);
+}
+
+export function readableModelFromSlugs(makeSlug: string, modelSlug: string): string {
+  return findModelBySlugs(makeSlug, modelSlug)?.model || readableFromSlug(modelSlug);
+}
+
+export function fetchBrandModelMenu(make: string): string[] {
+  const direct = findModelsForMake(make);
+  const fromClusters = SEO_CLUSTERS.filter((item) => item.make.toLowerCase() === make.toLowerCase()).map(
+    (item) => item.model
+  );
+  return Array.from(new Set([...direct, ...fromClusters]));
+}
+
+export function modelPageHref(make: string, model: string): string {
+  return modelHref(make, model);
 }
 
 export function resolveSeoCopy(page: SeoPage, locale: "en" | "uk" | "ru") {

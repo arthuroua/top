@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
 import { fetchSeoPages } from "../lib/seoApi";
+import { SEO_MODEL_MENU, modelHref } from "../lib/seoCatalog";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
 
@@ -30,7 +31,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: item.page_type === "brand" ? 0.82 : 0.8
   }));
 
-  const uniqueItems = [...baseItems, ...seoItems].filter(
+  const modelItems: MetadataRoute.Sitemap = SEO_MODEL_MENU.flatMap((brand) =>
+    brand.models.map((model) => ({
+      url: `${siteUrl}${modelHref(brand.make, model)}`,
+      lastModified: now,
+      changeFrequency: "daily" as const,
+      priority: 0.78
+    }))
+  );
+
+  const uniqueItems = [...baseItems, ...seoItems, ...modelItems].filter(
     (item, index, array) => array.findIndex((candidate) => candidate.url === item.url) === index
   );
 

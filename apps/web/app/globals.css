@@ -300,6 +300,69 @@ a {
   animation: skeletonSweep 1.2s linear infinite;
 }
 
+.carsHubSection {
+  display: grid;
+  gap: 14px;
+}
+
+.modelPillGrid {
+  margin-top: 14px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.modelPillGrid a {
+  text-decoration: none;
+  color: var(--accent-strong);
+  border: 1px solid rgba(27, 79, 153, 0.14);
+  border-radius: 999px;
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.88);
+  font-weight: 700;
+  font-size: 0.86rem;
+}
+
+.modelMenuGrid {
+  margin-top: 14px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.modelMenuCard {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  text-decoration: none;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 14px;
+  background:
+    radial-gradient(280px 120px at 100% 0%, rgba(217, 164, 65, 0.12), transparent 58%),
+    rgba(255, 255, 255, 0.94);
+  color: var(--text);
+  transition: transform 0.14s ease, border-color 0.14s ease, box-shadow 0.14s ease;
+}
+
+.modelMenuCard:hover {
+  transform: translateY(-2px);
+  border-color: rgba(27, 79, 153, 0.28);
+  box-shadow: 0 16px 30px rgba(16, 31, 51, 0.1);
+}
+
+.modelMenuCard span {
+  color: var(--muted);
+  font-family: var(--font-mono), Consolas, monospace;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+}
+
+.modelMenuCard strong {
+  overflow-wrap: anywhere;
+  font-size: 1.22rem;
+}
+
 .panel {
   border: 1px solid var(--line);
   border-radius: 24px;
@@ -1478,6 +1541,7 @@ select:focus {
   .auctionSpecsGrid,
   .marketSummaryGrid,
   .marketCompList,
+  .modelMenuGrid,
   .recentVehiclesGrid,
   .watchlistGrid,
   .watchlistFacts,
