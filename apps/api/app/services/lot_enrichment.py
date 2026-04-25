@@ -8,7 +8,7 @@ from urllib.request import Request, urlopen
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
-from app.models import Lot, LotImage
+from app.models import Lot, LotImage, MediaAsset
 from app.services.media_archive import archive_image, public_media_url
 
 
@@ -36,7 +36,27 @@ def _candidate_image_urls(url: str) -> list[str]:
     candidates: list[str] = []
     if "_thb." in value:
         candidates.extend([value.replace("_thb.", "_ful."), value.replace("_thb.", "_hrs.")])
+    if "_THB." in value:
+        candidates.extend([value.replace("_THB.", "_FUL."), value.replace("_THB.", "_HRS.")])
+    if "thumbnail" in value.lower():
+        candidates.extend([
+            value.replace("thumbnail", "full").replace("Thumbnail", "Full"),
+            value.replace("thumbnail", "highres").replace("Thumbnail", "HighRes"),
+        ])
     return [item for item in candidates if item != value]
+
+
+def _source_url_for_image(db: Session, image_url: str) -> str:
+    prefix = "/api/v1/media/archive/"
+    if not image_url.startswith(prefix):
+        return image_url
+    asset_id = image_url.removeprefix(prefix).split("/", 1)[0].strip()
+    if not asset_id:
+        return image_url
+    asset = db.get(MediaAsset, asset_id)
+    if asset is None or not asset.source_url:
+        return image_url
+    return asset.source_url
 
 
 def _url_exists(url: str) -> bool:
@@ -73,14 +93,16 @@ def enrich_lot_images(db: Session, *, source: str, lot_number: str, vin: str | N
 
     existing_urls = {image.image_url for image in lot.images}
     source_images = sorted(lot.images, key=lambda item: ((item.shot_order is None), item.shot_order or 0))
-    max_add = _env_int("ENRICHMENT_MAX_IMAGES_PER_LOT", 2, minimum=0)
+    max_add = _env_int("ENRICHMENT_MAX_IMAGES_PER_LOT", 8, minimum=0)
     verify_urls = _env_bool("ENRICHMENT_VERIFY_IMAGE_URLS", True)
     sleep_ms = _env_int("ENRICHMENT_REQUEST_DELAY_MS", 250, minimum=0)
 
     added = 0
     next_order = max((image.shot_order or 0 for image in source_images), default=0) + 1
     for image in source_images:
-        for candidate_url in _candidate_image_urls(image.image_url):
+        source_url = _source_url_for_image(db, image.image_url)
+        existing_urls.add(source_url)
+        for candidate_url in _candidate_image_urls(source_url):
             if added >= max_add:
                 break
             if candidate_url in existing_urls:
