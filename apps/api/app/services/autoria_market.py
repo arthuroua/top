@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import time
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
@@ -14,7 +15,7 @@ from urllib.request import Request, urlopen
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import LocalMarketListing
+from app.models import LocalMarketListing, MarketWatch
 from app.schemas import AutoRiaSnapshotResponse, LocalMarketBucket, LocalMarketPeriodStats, LocalMarketStatsResponse
 
 
@@ -85,6 +86,10 @@ def _query_hash(search_params: str) -> str:
     return hashlib.sha256(normalized.encode("utf-8")).hexdigest()
 
 
+def public_query_hash(search_params: str) -> str:
+    return _query_hash(search_params)
+
+
 def _get_json(url: str, timeout: float) -> Any:
     request = Request(
         url,
@@ -109,6 +114,112 @@ def _get_json(url: str, timeout: float) -> Any:
         raise RuntimeError("Auto.RIA API request timed out") from exc
     except json.JSONDecodeError as exc:
         raise RuntimeError("Auto.RIA API returned invalid JSON") from exc
+
+
+def _slugify(value: str) -> str:
+    slug = re.sub(r"[^a-z0-9]+", "-", value.lower()).strip("-")
+    return slug or f"watch-{hashlib.sha1(value.encode('utf-8')).hexdigest()[:8]}"
+
+
+def _normalize_watch_text(value: str) -> str:
+    replacements = {
+        "форд": "ford",
+        "форд edge": "ford edge",
+        "едж": "edge",
+        "эдж": "edge",
+        "бмв": "bmw",
+        "мерседес": "mercedes-benz",
+        "тойота": "toyota",
+        "тесла": "tesla",
+        "ауді": "audi",
+        "ауди": "audi",
+    }
+    clean = value.lower().strip()
+    for source, target in replacements.items():
+        clean = clean.replace(source, target)
+    return re.sub(r"\s+", " ", clean)
+
+
+def _extract_year(value: str) -> int | None:
+    match = re.search(r"\b(19[8-9]\d|20[0-3]\d)\b", value)
+    return int(match.group(1)) if match else None
+
+
+def _list_payload_items(payload: Any) -> list[dict[str, Any]]:
+    if isinstance(payload, dict):
+        for key in ("result", "data", "items"):
+            value = payload.get(key)
+            if isinstance(value, list):
+                return [item for item in value if isinstance(item, dict)]
+        return [payload]
+    if isinstance(payload, list):
+        return [item for item in payload if isinstance(item, dict)]
+    return []
+
+
+def _item_name(item: dict[str, Any]) -> str:
+    for key in ("name", "value", "title"):
+        value = item.get(key)
+        if isinstance(value, str):
+            return value.lower()
+    return ""
+
+
+def _item_id(item: dict[str, Any]) -> int | None:
+    for key in ("id", "marka_id", "model_id", "value"):
+        value = _as_int(item.get(key))
+        if value is not None:
+            return value
+    return None
+
+
+def _resolve_autoria_search_params(search_text: str, explicit_params: str | None = None) -> str:
+    if explicit_params:
+        return explicit_params.strip().lstrip("?")
+
+    config = load_autoria_config()
+    if not config.enabled or not config.api_key:
+        raise RuntimeError("AUTORIA_API_KEY is required to resolve text filters. Or pass raw Auto.RIA search_params.")
+
+    normalized = _normalize_watch_text(search_text)
+    year = _extract_year(normalized)
+    words = [word for word in re.sub(r"\b(19[8-9]\d|20[0-3]\d)\b", "", normalized).split(" ") if word]
+    if not words:
+        raise RuntimeError("Enter at least make/model, for example: Ford Edge 2020")
+
+    marks_url = f"{config.base_url}/auto/categories/1/marks?{urlencode({'api_key': config.api_key})}"
+    marks = _list_payload_items(_get_json(marks_url, config.timeout_seconds))
+    make_item = next((item for item in marks if _item_name(item) == words[0]), None)
+    if make_item is None:
+        make_item = next((item for item in marks if words[0] in _item_name(item)), None)
+    make_id = _item_id(make_item or {})
+    if make_id is None:
+        raise RuntimeError(f"Could not resolve Auto.RIA make from '{words[0]}'")
+
+    params: dict[str, str | int] = {
+        "category_id": 1,
+        "marka_id[0]": make_id,
+        "with_photo": 1,
+        "currency": 1,
+        "abroad": 2,
+        "custom": 1,
+    }
+    if year is not None:
+        params["s_yers[0]"] = year
+        params["po_yers[0]"] = year
+
+    if len(words) > 1:
+        model_query = " ".join(words[1:])
+        models_url = f"{config.base_url}/auto/categories/1/marks/{make_id}/models?{urlencode({'api_key': config.api_key})}"
+        models = _list_payload_items(_get_json(models_url, config.timeout_seconds))
+        model_item = next((item for item in models if _item_name(item) == model_query), None)
+        if model_item is None:
+            model_item = next((item for item in models if model_query in _item_name(item) or _item_name(item) in model_query), None)
+        model_id = _item_id(model_item or {})
+        if model_id is not None:
+            params["model_id[0]"] = model_id
+
+    return urlencode(params)
 
 
 def _as_int(value: Any) -> int | None:
@@ -311,6 +422,82 @@ def run_autoria_snapshot(
     )
 
 
+def create_market_watch(db: Session, *, search_text: str, name: str | None = None, search_params: str | None = None) -> MarketWatch:
+    resolved_params = _resolve_autoria_search_params(search_text, search_params)
+    watch_name = (name or search_text).strip()
+    base_slug = _slugify(watch_name)
+    slug = base_slug
+    suffix = 2
+    while db.execute(select(MarketWatch).where(MarketWatch.slug == slug)).scalars().first() is not None:
+        slug = f"{base_slug}-{suffix}"
+        suffix += 1
+    watch = MarketWatch(
+        slug=slug,
+        name=watch_name,
+        search_text=search_text.strip(),
+        search_params=resolved_params,
+        query_hash=_query_hash(resolved_params),
+        is_active=True,
+    )
+    db.add(watch)
+    db.commit()
+    db.refresh(watch)
+    return watch
+
+
+def run_market_watch(db: Session, watch: MarketWatch, *, max_pages: int | None = None) -> AutoRiaSnapshotResponse:
+    result = run_autoria_snapshot(
+        db,
+        search_params=watch.search_params,
+        query_label=watch.slug,
+        max_pages=max_pages,
+    )
+    watch.last_run_at = datetime.now(timezone.utc)
+    watch.last_active_ids_seen = result.active_ids_seen
+    watch.last_listings_upserted = result.listings_upserted
+    watch.last_sold_or_removed_detected = result.sold_or_removed_detected
+    db.commit()
+    db.refresh(watch)
+    return result
+
+
+def active_watch_items(db: Session, watch: MarketWatch, *, limit: int = 80) -> list[LocalMarketListing]:
+    return (
+        db.execute(
+            select(LocalMarketListing)
+            .where(
+                LocalMarketListing.provider == "autoria",
+                LocalMarketListing.query_hash == watch.query_hash,
+                LocalMarketListing.is_active.is_(True),
+            )
+            .order_by(LocalMarketListing.price_usd.asc().nulls_last(), LocalMarketListing.last_seen_at.desc())
+            .limit(limit)
+        )
+        .scalars()
+        .all()
+    )
+
+
+def changed_watch_items(db: Session, watch: MarketWatch, *, days: int = 30, limit: int = 80) -> list[LocalMarketListing]:
+    since = datetime.now(timezone.utc) - timedelta(days=days)
+    return (
+        db.execute(
+            select(LocalMarketListing)
+            .where(
+                LocalMarketListing.provider == "autoria",
+                LocalMarketListing.query_hash == watch.query_hash,
+                LocalMarketListing.is_active.is_(False),
+                LocalMarketListing.sold_detected_at.is_not(None),
+                LocalMarketListing.sold_detected_at >= since,
+            )
+            .order_by(LocalMarketListing.sold_detected_at.desc(), LocalMarketListing.price_usd.asc().nulls_last())
+            .limit(limit)
+        )
+        .scalars()
+        .all()
+    )
+
+
 def sold_or_removed_since(db: Session, *, hours: int = 24, limit: int = 100) -> list[LocalMarketListing]:
     since = datetime.now(timezone.utc) - timedelta(hours=hours)
     return (
@@ -420,23 +607,23 @@ def _period_stats(items: list[LocalMarketListing], days: int) -> LocalMarketPeri
     )
 
 
-def local_market_stats(db: Session, *, periods: tuple[int, ...] = (1, 7, 30)) -> LocalMarketStatsResponse:
+def local_market_stats(
+    db: Session,
+    *,
+    periods: tuple[int, ...] = (1, 7, 30),
+    query_hash: str | None = None,
+) -> LocalMarketStatsResponse:
     max_days = max(periods)
     since = datetime.now(timezone.utc) - timedelta(days=max_days)
-    records = (
-        db.execute(
-            select(LocalMarketListing)
-            .where(
-                LocalMarketListing.provider == "autoria",
-                LocalMarketListing.is_active.is_(False),
-                LocalMarketListing.sold_detected_at.is_not(None),
-                LocalMarketListing.sold_detected_at >= since,
-            )
-            .order_by(LocalMarketListing.sold_detected_at.desc())
-        )
-        .scalars()
-        .all()
+    statement = select(LocalMarketListing).where(
+        LocalMarketListing.provider == "autoria",
+        LocalMarketListing.is_active.is_(False),
+        LocalMarketListing.sold_detected_at.is_not(None),
+        LocalMarketListing.sold_detected_at >= since,
     )
+    if query_hash:
+        statement = statement.where(LocalMarketListing.query_hash == query_hash)
+    records = db.execute(statement.order_by(LocalMarketListing.sold_detected_at.desc())).scalars().all()
     now = datetime.now(timezone.utc)
     return LocalMarketStatsResponse(
         periods=[

@@ -198,6 +198,28 @@ class LocalMarketListing(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
 
+class MarketWatch(Base):
+    __tablename__ = "market_watches"
+    __table_args__ = (
+        UniqueConstraint("slug", name="uq_market_watch_slug"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    provider: Mapped[str] = mapped_column(String(32), index=True, default="autoria")
+    slug: Mapped[str] = mapped_column(String(128), index=True)
+    name: Mapped[str] = mapped_column(String(160))
+    search_text: Mapped[str] = mapped_column(String(255))
+    search_params: Mapped[str] = mapped_column(String(4000))
+    query_hash: Mapped[str] = mapped_column(String(64), index=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
+    last_run_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, index=True)
+    last_active_ids_seen: Mapped[int] = mapped_column(Integer, default=0)
+    last_listings_upserted: Mapped[int] = mapped_column(Integer, default=0)
+    last_sold_or_removed_detected: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+
 class SeoPage(Base):
     __tablename__ = "seo_pages"
     __table_args__ = (UniqueConstraint("slug_path", name="uq_seo_page_slug_path"),)

@@ -276,6 +276,38 @@ class LocalMarketStatsResponse(BaseModel):
     periods: list[LocalMarketPeriodStats]
 
 
+class MarketWatchCreate(BaseModel):
+    name: str | None = Field(default=None, max_length=160)
+    search_text: str = Field(min_length=2, max_length=255)
+    search_params: str | None = Field(default=None, max_length=4000)
+
+
+class MarketWatchRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    provider: str
+    slug: str
+    name: str
+    search_text: str
+    search_params: str
+    query_hash: str
+    is_active: bool
+    last_run_at: datetime | None = None
+    last_active_ids_seen: int
+    last_listings_upserted: int
+    last_sold_or_removed_detected: int
+    created_at: datetime
+    updated_at: datetime
+
+
+class MarketWatchDetailResponse(BaseModel):
+    watch: MarketWatchRead
+    stats: LocalMarketStatsResponse
+    active_items: list[LocalMarketListingRead]
+    changed_items: list[LocalMarketListingRead]
+
+
 class AdvisorReportCreate(BaseModel):
     vin: str = Field(min_length=17, max_length=17)
     assumptions: AdvisorInput

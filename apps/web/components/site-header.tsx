@@ -20,6 +20,7 @@ export function SiteHeader() {
           <Link href="/search">{dict.nav.search}</Link>
           <Link href="/cars">{dict.nav.catalog}</Link>
           <Link href="/local-market">{dict.nav.localMarket}</Link>
+          <Link href="/market-watch">Market Watch</Link>
           <Link href="/watchlist">{dict.nav.watchlist}</Link>
           <Link href="/search#toolkit">{dict.nav.calculator}</Link>
           <Link href="/about">{dict.nav.about}</Link>
