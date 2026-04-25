@@ -65,6 +65,9 @@ def proxy_lot_image(vin: str, lot_number: str, image_index: int, db: Session = D
         raise HTTPException(status_code=404, detail="Image not found")
 
     source_url = _normalize_url(images[image_index].image_url)
+    if source_url.startswith("/api/v1/media/archive/"):
+        asset_id = source_url.rstrip("/").split("/")[-1]
+        return get_archived_image(asset_id, db)
     if not _is_host_allowed(source_url):
         raise HTTPException(status_code=403, detail="Image host is not allowed")
 

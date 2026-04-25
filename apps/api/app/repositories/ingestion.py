@@ -6,6 +6,22 @@ from sqlalchemy.orm import Session
 from app.models import Lot, LotImage, PriceEvent, Vehicle
 from app.repositories.ingestion_history import create_ingestion_snapshot
 from app.schemas import IngestionJobPayload, IngestionProcessResult
+from app.services.media_archive import archive_image, public_media_url
+
+
+def _archive_lot_image(db: Session, *, lot: Lot, source_url: str) -> tuple[str, str | None]:
+    if source_url.startswith("/api/v1/media/archive/"):
+        return source_url, None
+    asset = archive_image(
+        db,
+        provider=lot.source.lower(),
+        owner_type="lot",
+        owner_id=f"{lot.source.lower()}:{lot.lot_number}",
+        source_url=source_url,
+    )
+    if asset is None or not asset.is_archived:
+        return source_url, None
+    return public_media_url(asset), asset.checksum
 
 
 def apply_ingestion_job(db: Session, job: IngestionJobPayload) -> IngestionProcessResult:
@@ -48,15 +64,17 @@ def apply_ingestion_job(db: Session, job: IngestionJobPayload) -> IngestionProce
 
     images_upserted = 0
     for idx, image_url in enumerate(job.images, start=1):
+        stored_image_url, checksum = _archive_lot_image(db, lot=lot, source_url=image_url)
         existing_image = db.execute(
-            select(LotImage).where(LotImage.lot_id == lot.id, LotImage.image_url == image_url)
+            select(LotImage).where(LotImage.lot_id == lot.id, LotImage.image_url == stored_image_url)
         ).scalar_one_or_none()
 
         if existing_image is None:
-            db.add(LotImage(lot_id=lot.id, image_url=image_url, shot_order=idx))
+            db.add(LotImage(lot_id=lot.id, image_url=stored_image_url, shot_order=idx, checksum=checksum))
             images_upserted += 1
         else:
             existing_image.shot_order = idx
+            existing_image.checksum = existing_image.checksum or checksum
 
     price_events_added = 0
     for event in job.price_events:

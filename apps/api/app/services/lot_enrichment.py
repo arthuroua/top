@@ -9,6 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from app.models import Lot, LotImage
+from app.services.media_archive import archive_image, public_media_url
 
 
 def _env_bool(name: str, default: bool) -> bool:
@@ -89,8 +90,18 @@ def enrich_lot_images(db: Session, *, source: str, lot_number: str, vin: str | N
             if verify_urls and not _url_exists(candidate_url):
                 continue
 
-            db.add(LotImage(lot_id=lot.id, image_url=candidate_url, shot_order=next_order))
+            asset = archive_image(
+                db,
+                provider=lot.source.lower(),
+                owner_type="lot",
+                owner_id=f"{lot.source.lower()}:{lot.lot_number}",
+                source_url=candidate_url,
+            )
+            stored_url = public_media_url(asset) if asset is not None and asset.is_archived else candidate_url
+            checksum = asset.checksum if asset is not None and asset.is_archived else None
+            db.add(LotImage(lot_id=lot.id, image_url=stored_url, shot_order=next_order, checksum=checksum))
             existing_urls.add(candidate_url)
+            existing_urls.add(stored_url)
             next_order += 1
             added += 1
         if added >= max_add:

@@ -34,6 +34,8 @@ def get_vehicle_stats(db: Session = Depends(get_db)) -> dict:
 
 
 def _is_direct_image_url(url: str) -> bool:
+    if url.startswith("/api/v1/media/archive/"):
+        return True
     lowered = url.lower().split("?", 1)[0].split("#", 1)[0]
     return lowered.endswith((".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp", ".avif"))
 
@@ -66,6 +68,15 @@ def _to_lot_item(lot: Lot) -> LotItem:
         safe_images: list[LotImageItem] = []
         for index, image in enumerate(images):
             if not _is_direct_image_url(image.image_url):
+                continue
+            if image.image_url.startswith("/api/v1/media/archive/"):
+                safe_images.append(
+                    LotImageItem(
+                        image_url=image.image_url,
+                        shot_order=image.shot_order,
+                        checksum=image.checksum,
+                    )
+                )
                 continue
             safe_images.append(
                 LotImageItem(
@@ -116,6 +127,8 @@ def _first_safe_image(lot: Lot) -> str | None:
     for index, image in enumerate(images):
         if not _is_direct_image_url(image.image_url):
             continue
+        if image.image_url.startswith("/api/v1/media/archive/"):
+            return image.image_url
         if hide_data_source():
             return f"/api/v1/media/vehicles/{lot.vin}/lots/{lot.lot_number}/images/{index}"
         return image.image_url

@@ -52,6 +52,13 @@ type CopartCsvRunResult = {
   finished_at: string;
 };
 
+type CopartArchiveImagesResult = {
+  lots_seen: number;
+  images_seen: number;
+  images_archived: number;
+  images_failed: number;
+};
+
 type EnrichmentQueueDepth = {
   queue_depth: number;
 };
@@ -309,6 +316,7 @@ export default function IngestionPage() {
   const [loadingEnrichmentProcess, setLoadingEnrichmentProcess] = useState(false);
   const [loadingAutoRiaSnapshot, setLoadingAutoRiaSnapshot] = useState(false);
   const [loadingAutoRiaSoldToday, setLoadingAutoRiaSoldToday] = useState(false);
+  const [loadingCopartArchive, setLoadingCopartArchive] = useState(false);
 
   const [error, setError] = useState("");
   const [enqueueResult, setEnqueueResult] = useState<IngestionEnqueueResponse | null>(null);
@@ -320,6 +328,7 @@ export default function IngestionPage() {
   const [enrichmentProcessResult, setEnrichmentProcessResult] = useState<EnrichmentProcessResult | null>(null);
   const [autoRiaSnapshotResult, setAutoRiaSnapshotResult] = useState<AutoRiaSnapshotResult | null>(null);
   const [autoRiaSoldTodayResult, setAutoRiaSoldTodayResult] = useState<AutoRiaSoldTodayResult | null>(null);
+  const [copartArchiveResult, setCopartArchiveResult] = useState<CopartArchiveImagesResult | null>(null);
   const [adminToken, setAdminToken] = useState<string>(() => {
     if (typeof window === "undefined") return "";
     try {
@@ -633,6 +642,25 @@ export default function IngestionPage() {
       setError(err instanceof Error ? err.message : "Request failed");
     } finally {
       setLoadingAutoRiaSnapshot(false);
+    }
+  }
+
+  async function archiveCopartImages() {
+    setError("");
+    setCopartArchiveResult(null);
+    setLoadingCopartArchive(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/v1/ingestion/copart/archive-images?limit=300`, {
+        method: "POST",
+        headers: { "X-Admin-Token": adminToken.trim() }
+      });
+      if (!res.ok) throw new Error(await readApiError(res, "Failed to archive Copart images"));
+      const json = (await res.json()) as CopartArchiveImagesResult;
+      setCopartArchiveResult(json);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Request failed");
+    } finally {
+      setLoadingCopartArchive(false);
     }
   }
 
@@ -1273,6 +1301,9 @@ export default function IngestionPage() {
           <button type="button" onClick={processOneEnrichment} disabled={loadingEnrichmentProcess || !adminToken.trim()}>
             {loadingEnrichmentProcess ? "Enriching One" : "Process One Enrichment"}
           </button>
+          <button type="button" onClick={archiveCopartImages} disabled={loadingCopartArchive || !adminToken.trim()}>
+            {loadingCopartArchive ? "Archiving Copart" : "Archive Copart Images"}
+          </button>
           <button type="button" onClick={runAutoRiaSnapshot} disabled={loadingAutoRiaSnapshot || !adminToken.trim()}>
             {loadingAutoRiaSnapshot ? "Scanning Auto.RIA" : "Run Auto.RIA Snapshot"}
           </button>
@@ -1332,6 +1363,16 @@ export default function IngestionPage() {
                 : "-"}
             </p>
             <p>Images added: {enrichmentProcessResult.images_added}</p>
+          </div>
+        )}
+
+        {copartArchiveResult && (
+          <div className="panel reportSaved">
+            <p className="label">Copart Image Archive</p>
+            <p>Lots scanned: {copartArchiveResult.lots_seen}</p>
+            <p>Images seen: {copartArchiveResult.images_seen}</p>
+            <p>Images archived: {copartArchiveResult.images_archived}</p>
+            <p>Images failed: {copartArchiveResult.images_failed}</p>
           </div>
         )}
 

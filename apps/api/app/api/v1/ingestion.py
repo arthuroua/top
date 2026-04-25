@@ -31,6 +31,7 @@ from app.schemas import (
     IngestionQueueDepth,
 )
 from app.services.connectors import connector_statuses, fetch_from_connector
+from app.services.copart_media import archive_existing_copart_images
 from app.services.copart_csv import load_copart_csv_config, run_copart_csv_ingestion
 from app.services.ingestion_queue import (
     enrichment_queue_depth,
@@ -615,6 +616,14 @@ def run_copart_csv_once(
         "started_at": stats.started_at.isoformat(),
         "finished_at": stats.finished_at.isoformat(),
     }
+
+
+@router.post("/copart/archive-images", dependencies=[Depends(_require_admin)])
+def archive_copart_images(
+    limit: int = Query(default=200, ge=1, le=5000),
+    db: Session = Depends(get_db),
+) -> dict:
+    return archive_existing_copart_images(db, limit=limit)
 
 
 @router.post("/process-one", response_model=IngestionProcessResult, dependencies=[Depends(_require_admin)])
