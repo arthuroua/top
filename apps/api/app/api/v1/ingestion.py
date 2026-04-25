@@ -6,7 +6,7 @@ import os
 import secrets
 import time
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
+from fastapi import APIRouter, Depends, File, Header, HTTPException, Query, UploadFile, status
 from fastapi.responses import Response
 from redis.exceptions import RedisError
 from sqlalchemy import select
@@ -41,6 +41,7 @@ from app.services.ingestion_queue import (
     pop_ingestion_job,
     queue_depth,
 )
+from app.services.iaai_csv import import_iaai_csv
 from app.services.lot_enrichment import enrich_lot_images
 
 router = APIRouter(prefix="/api/v1/ingestion", tags=["ingestion"])
@@ -195,6 +196,20 @@ def enqueue_job(payload: IngestionJobPayload) -> IngestionEnqueueResponse:
         raise HTTPException(status_code=503, detail=f"Queue unavailable: {exc}") from exc
 
     return IngestionEnqueueResponse(accepted=True, queue_depth=depth)
+
+
+@router.post("/iaai-csv/import", dependencies=[Depends(_require_admin)])
+async def import_iaai_csv_file(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+) -> dict:
+    filename = file.filename or "iaai.csv"
+    if not filename.lower().endswith(".csv"):
+        raise HTTPException(status_code=400, detail="Upload a CSV file exported from IAA")
+    content = await file.read()
+    if not content:
+        raise HTTPException(status_code=400, detail="CSV file is empty")
+    return import_iaai_csv(db, content, filename)
 
 
 @router.get("/connectors", response_model=list[IngestionConnectorStatus])

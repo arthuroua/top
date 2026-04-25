@@ -59,6 +59,15 @@ type CopartArchiveImagesResult = {
   images_failed: number;
 };
 
+type IaaCsvImportResult = {
+  filename: string;
+  csv_type: string;
+  rows_total: number;
+  imported: number;
+  skipped: number;
+  errors: string[];
+};
+
 type EnrichmentQueueDepth = {
   queue_depth: number;
 };
@@ -317,6 +326,8 @@ export default function IngestionPage() {
   const [loadingAutoRiaSnapshot, setLoadingAutoRiaSnapshot] = useState(false);
   const [loadingAutoRiaSoldToday, setLoadingAutoRiaSoldToday] = useState(false);
   const [loadingCopartArchive, setLoadingCopartArchive] = useState(false);
+  const [loadingIaaCsvImport, setLoadingIaaCsvImport] = useState(false);
+  const [iaaCsvFile, setIaaCsvFile] = useState<File | null>(null);
 
   const [error, setError] = useState("");
   const [enqueueResult, setEnqueueResult] = useState<IngestionEnqueueResponse | null>(null);
@@ -329,6 +340,7 @@ export default function IngestionPage() {
   const [autoRiaSnapshotResult, setAutoRiaSnapshotResult] = useState<AutoRiaSnapshotResult | null>(null);
   const [autoRiaSoldTodayResult, setAutoRiaSoldTodayResult] = useState<AutoRiaSoldTodayResult | null>(null);
   const [copartArchiveResult, setCopartArchiveResult] = useState<CopartArchiveImagesResult | null>(null);
+  const [iaaCsvResult, setIaaCsvResult] = useState<IaaCsvImportResult | null>(null);
   const [adminToken, setAdminToken] = useState<string>(() => {
     if (typeof window === "undefined") return "";
     try {
@@ -622,6 +634,32 @@ export default function IngestionPage() {
       setError(err instanceof Error ? err.message : "Request failed");
     } finally {
       setLoadingCopartCsvRun(false);
+    }
+  }
+
+  async function importIaaCsv() {
+    setError("");
+    setIaaCsvResult(null);
+    if (!iaaCsvFile) {
+      setError("Choose an IAA CSV file first");
+      return;
+    }
+    setLoadingIaaCsvImport(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", iaaCsvFile);
+      const res = await fetch(`${API_BASE}/api/v1/ingestion/iaai-csv/import`, {
+        method: "POST",
+        headers: { "X-Admin-Token": adminToken.trim() },
+        body: formData
+      });
+      if (!res.ok) throw new Error(await readApiError(res, "Failed to import IAA CSV"));
+      const json = (await res.json()) as IaaCsvImportResult;
+      setIaaCsvResult(json);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Request failed");
+    } finally {
+      setLoadingIaaCsvImport(false);
     }
   }
 
@@ -1312,6 +1350,21 @@ export default function IngestionPage() {
           </button>
         </div>
 
+        <div className="panel reportSaved">
+          <p className="label">IAA CSV Import</p>
+          <p>Upload Purchase History or Won Vehicles to Be Paid CSV from the IAA buyer cabinet.</p>
+          <div className="actions">
+            <input
+              accept=".csv,text/csv"
+              type="file"
+              onChange={(event) => setIaaCsvFile(event.target.files?.[0] || null)}
+            />
+            <button type="button" onClick={importIaaCsv} disabled={loadingIaaCsvImport || !adminToken.trim() || !iaaCsvFile}>
+              {loadingIaaCsvImport ? "Importing IAA CSV" : "Import IAA CSV"}
+            </button>
+          </div>
+        </div>
+
         {depthResult && (
           <div className="panel reportSaved">
             <p className="label">Queue Depth</p>
@@ -1373,6 +1426,18 @@ export default function IngestionPage() {
             <p>Images seen: {copartArchiveResult.images_seen}</p>
             <p>Images archived: {copartArchiveResult.images_archived}</p>
             <p>Images failed: {copartArchiveResult.images_failed}</p>
+          </div>
+        )}
+
+        {iaaCsvResult && (
+          <div className="panel reportSaved">
+            <p className="label">IAA CSV Import Result</p>
+            <p>File: {iaaCsvResult.filename}</p>
+            <p>Type: {iaaCsvResult.csv_type}</p>
+            <p>Rows: {iaaCsvResult.rows_total}</p>
+            <p>Imported: {iaaCsvResult.imported}</p>
+            <p>Skipped: {iaaCsvResult.skipped}</p>
+            {iaaCsvResult.errors.length > 0 && <p>Errors: {iaaCsvResult.errors.join(" | ")}</p>}
           </div>
         )}
 
