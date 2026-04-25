@@ -173,6 +173,7 @@ function readNumber(value: string): number {
 
 function toDisplayImageUrl(value: string): string {
   const trimmed = value.trim();
+  if (trimmed.startsWith(`${API_BASE}/`)) return trimmed;
   if (trimmed.startsWith("/api/")) return `${API_BASE}${trimmed}`;
   if (trimmed.startsWith("http://")) return trimmed.replace("http://", "https://");
   return trimmed;
@@ -180,7 +181,7 @@ function toDisplayImageUrl(value: string): string {
 
 function isDirectImageUrl(value: string): boolean {
   const normalized = toDisplayImageUrl(value).toLowerCase();
-  if (normalized.includes("/api/v1/media/vehicles/")) return true;
+  if (normalized.includes("/api/v1/media/vehicles/") || normalized.includes("/api/v1/media/archive/")) return true;
   const pathOnly = normalized.split(/[?#]/, 1)[0];
   return [".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp", ".avif"].some((ext) => pathOnly.endsWith(ext));
 }

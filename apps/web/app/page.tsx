@@ -42,6 +42,7 @@ function toVehicleName(item: RecentVehicle): string {
 
 function toDisplayImageUrl(value: string | null): string | null {
   if (!value) return null;
+  if (value.startsWith(`${API_BASE}/`)) return value;
   if (value.startsWith("/api/")) return `${API_BASE}${value}`;
   if (value.startsWith("http://")) return value.replace("http://", "https://");
   return value;

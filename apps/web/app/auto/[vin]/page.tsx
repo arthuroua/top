@@ -173,6 +173,7 @@ function toDate(value: string | null | undefined): string {
 }
 
 function toDisplayImageUrl(value: string): string {
+  if (value.startsWith(`${apiPublicBase}/`)) return value;
   if (value.startsWith("/api/")) return `${apiPublicBase}${value}`;
   if (value.startsWith("http://")) return value.replace("http://", "https://");
   return value;
@@ -180,7 +181,7 @@ function toDisplayImageUrl(value: string): string {
 
 function isDirectImageUrl(value: string): boolean {
   const normalized = toDisplayImageUrl(value).toLowerCase();
-  if (normalized.includes("/api/v1/media/vehicles/")) return true;
+  if (normalized.includes("/api/v1/media/vehicles/") || normalized.includes("/api/v1/media/archive/")) return true;
   const pathOnly = normalized.split(/[?#]/, 1)[0];
   return [".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp", ".avif"].some((ext) => pathOnly.endsWith(ext));
 }
