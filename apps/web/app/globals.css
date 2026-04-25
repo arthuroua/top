@@ -2290,3 +2290,92 @@ html[data-theme="dark"] .historyRow,
 html[data-theme="dark"] .lotCard {
   box-shadow: 0 18px 44px rgba(0, 0, 0, 0.22);
 }
+
+/* Dark-mode button fixes and compact single-photo VIN preview */
+.autoTopGallerySingle {
+  grid-template-columns: minmax(0, 520px);
+  justify-content: start;
+}
+
+.autoTopGallerySingle .autoTopMainPhoto {
+  max-width: 520px;
+}
+
+.autoTopGallerySingle .autoTopMainPhoto img {
+  min-height: 0;
+  height: auto;
+  aspect-ratio: 16 / 9;
+}
+
+.lotSpotlightGridNoGallery {
+  grid-template-columns: 1fr;
+}
+
+.lotSpotlightGridNoGallery .lotSpotlightFacts {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+html[data-theme="dark"] .button,
+html[data-theme="dark"] a.button,
+html[data-theme="dark"] button.button {
+  color: #07111f;
+  border-color: rgba(143, 185, 255, 0.28);
+  background: linear-gradient(180deg, #cfe0ff, #91bbff);
+  box-shadow: 0 10px 24px rgba(143, 185, 255, 0.18);
+}
+
+html[data-theme="dark"] .ghostButton,
+html[data-theme="dark"] .themeToggle,
+html[data-theme="dark"] .siteNav a,
+html[data-theme="dark"] .localePill,
+html[data-theme="dark"] .photoLightboxNav button,
+html[data-theme="dark"] .homeQuickLinks a,
+html[data-theme="dark"] .autoJumpNav a,
+html[data-theme="dark"] .modelPillGrid a,
+html[data-theme="dark"] .recentMeta span {
+  color: #dbe8ff;
+  border-color: rgba(174, 196, 224, 0.2);
+  background: rgba(19, 29, 44, 0.88);
+  box-shadow: none;
+}
+
+html[data-theme="dark"] .siteNav a:first-child,
+html[data-theme="dark"] .localePill.active {
+  color: #07111f;
+  background: linear-gradient(180deg, #cfe0ff, #91bbff);
+}
+
+html[data-theme="dark"] .autoTopMainPhoto,
+html[data-theme="dark"] .autoTopThumbs button {
+  border-color: rgba(174, 196, 224, 0.18);
+  background: rgba(12, 18, 28, 0.9);
+}
+
+html[data-theme="dark"] .photoLightboxClose {
+  color: #ffffff;
+  background: rgba(8, 16, 28, 0.82);
+}
+
+@media (max-width: 980px) {
+  .autoTopGallerySingle {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .autoTopGallerySingle .autoTopMainPhoto {
+    max-width: none;
+  }
+
+  .lotSpotlightGridNoGallery .lotSpotlightFacts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .autoTopGallerySingle .autoTopMainPhoto img {
+    aspect-ratio: 4 / 3;
+  }
+
+  .lotSpotlightGridNoGallery .lotSpotlightFacts {
+    grid-template-columns: 1fr;
+  }
+}

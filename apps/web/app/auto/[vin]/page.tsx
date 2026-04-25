@@ -484,29 +484,23 @@ export default async function AutoSeoPage({ params }: PageProps) {
               <p className="muted">Latest lot spotlight with the fastest way to judge whether the car still makes sense.</p>
             </div>
           </div>
-          <div className="lotSpotlightGrid">
-            <div className="lotSpotlightGallery">
-              {latestLotImages.length > 0 ? (
+          <div className={`lotSpotlightGrid ${latestLotImages.length <= 1 ? "lotSpotlightGridNoGallery" : ""}`}>
+            {latestLotImages.length > 1 && (
+              <div className="lotSpotlightGallery">
                 <>
                   <a href={latestLotImages[0]} target="_blank" rel="noreferrer" className="mainPhotoLink">
                     <img src={latestLotImages[0]} alt={`${vehicleName} latest lot main`} className="mainPhoto" />
                   </a>
-                  {latestLotImages.length > 1 && (
-                    <div className="thumbGrid">
-                      {latestLotImages.slice(1).map((url, imageIndex) => (
-                        <a key={`${url}-${imageIndex}`} href={url} target="_blank" rel="noreferrer" className="thumbLink">
-                          <img src={url} alt={`${vehicleName} latest lot ${imageIndex + 2}`} className="thumbPhoto" loading="lazy" />
-                        </a>
-                      ))}
-                    </div>
-                  )}
+                  <div className="thumbGrid">
+                    {latestLotImages.slice(1).map((url, imageIndex) => (
+                      <a key={`${url}-${imageIndex}`} href={url} target="_blank" rel="noreferrer" className="thumbLink">
+                        <img src={url} alt={`${vehicleName} latest lot ${imageIndex + 2}`} className="thumbPhoto" loading="lazy" />
+                      </a>
+                    ))}
+                  </div>
                 </>
-              ) : (
-                <div className="spotlightEmpty">
-                  <p>{dict.search.noPhotos}</p>
-                </div>
-              )}
-            </div>
+              </div>
+            )}
             <div className="lotSpotlightFacts">
               <div className="purchasePriceHero spotlightPriceHero">
                 <p>{lotPriceLabel(latestLot, dict)}</p>

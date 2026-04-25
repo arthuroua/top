@@ -26,7 +26,7 @@ export function AutoPhotoGallery({ images, vehicleName }: AutoPhotoGalleryProps)
 
   return (
     <>
-      <div className="autoTopGallery">
+      <div className={`autoTopGallery ${images.length === 1 ? "autoTopGallerySingle" : ""}`}>
         <button type="button" className="autoTopMainPhoto" onClick={() => setActiveIndex(0)}>
           <img src={images[0]} alt={`${vehicleName} main auction photo`} loading="eager" />
         </button>
@@ -46,7 +46,7 @@ export function AutoPhotoGallery({ images, vehicleName }: AutoPhotoGalleryProps)
           <button type="button" className="photoLightboxBackdrop" aria-label="Close photo" onClick={() => setActiveIndex(null)} />
           <div className="photoLightboxPanel">
             <button type="button" className="photoLightboxClose" onClick={() => setActiveIndex(null)}>
-              ×
+              X
             </button>
             <img src={activeImage} alt={`${vehicleName} auction photo preview`} />
             {images.length > 1 && (
