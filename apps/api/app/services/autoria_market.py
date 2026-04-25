@@ -17,6 +17,7 @@ from sqlalchemy.orm import Session
 
 from app.models import LocalMarketListing, MarketWatch
 from app.schemas import AutoRiaSnapshotResponse, LocalMarketBucket, LocalMarketPeriodStats, LocalMarketStatsResponse
+from app.services.media_archive import archive_image, public_media_url
 
 
 DEFAULT_SEARCH_PARAMS = "category_id=1&with_photo=1&currency=1&abroad=2&custom=1"
@@ -59,6 +60,11 @@ def _env_float(name: str, default: float, minimum: float = 0.0) -> float:
     raw = os.getenv(name, "").strip()
     if not raw:
         return default
+
+
+def _media_archive_enabled() -> bool:
+    raw = os.getenv("MEDIA_ARCHIVE_ENABLED", "true").strip().lower()
+    return raw in {"1", "true", "yes", "on"}
     try:
         return max(minimum, float(raw))
     except ValueError:
@@ -332,6 +338,18 @@ def _upsert_listing(db: Session, values: dict[str, Any]) -> None:
         record.removal_status = None
 
 
+def _archive_listing_images(db: Session, *, listing_id: str, image_urls: list[str]) -> list[str]:
+    if not _media_archive_enabled():
+        return image_urls
+    max_images = _env_int("MEDIA_ARCHIVE_MAX_IMAGES_PER_LISTING", 6, minimum=0, maximum=24)
+    archived: list[str] = []
+    for url in image_urls[:max_images]:
+        asset = archive_image(db, provider="autoria", owner_type="local_market_listing", owner_id=listing_id, source_url=url)
+        if asset is not None and asset.is_archived:
+            archived.append(public_media_url(asset))
+    return archived or image_urls
+
+
 def _search_url(config: AutoRiaConfig, *, page: int, search_params: str) -> str:
     params = f"api_key={config.api_key}&countpage={config.countpage}&page={page}"
     if search_params:
@@ -385,10 +403,10 @@ def run_autoria_snapshot(
             info = info[0]
         if not isinstance(info, dict):
             continue
-        _upsert_listing(
-            db,
-            _extract_listing(info, listing_id=listing_id, query_label=query_label, query_hash=effective_hash, now=now),
-        )
+        values = _extract_listing(info, listing_id=listing_id, query_label=query_label, query_hash=effective_hash, now=now)
+        values["image_urls_json"] = _archive_listing_images(db, listing_id=listing_id, image_urls=values["image_urls_json"])
+        values["photo_url"] = values["image_urls_json"][0] if values["image_urls_json"] else values["photo_url"]
+        _upsert_listing(db, values)
         upserted += 1
         if config.delay_ms:
             time.sleep(config.delay_ms / 1000)

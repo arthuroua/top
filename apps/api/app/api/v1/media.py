@@ -11,7 +11,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from app.db import get_db
-from app.models import Lot
+from app.models import Lot, MediaAsset
 
 router = APIRouter(prefix="/api/v1/media", tags=["media"])
 
@@ -91,3 +91,24 @@ def proxy_lot_image(vin: str, lot_number: str, image_index: int, db: Session = D
         raise HTTPException(status_code=status, detail="Unable to fetch image from upstream") from exc
     except (URLError, TimeoutError, OSError) as exc:
         raise HTTPException(status_code=502, detail="Unable to fetch image from upstream") from exc
+
+
+@router.get("/archive/{asset_id}")
+def get_archived_image(asset_id: str, db: Session = Depends(get_db)) -> Response:
+    asset = db.execute(select(MediaAsset).where(MediaAsset.id == asset_id, MediaAsset.is_archived.is_(True))).scalars().first()
+    if asset is None:
+        raise HTTPException(status_code=404, detail="Archived image not found")
+
+    try:
+        payload = open(asset.storage_path, "rb").read()
+    except OSError as exc:
+        raise HTTPException(status_code=404, detail="Archived image file not found") from exc
+
+    return Response(
+        content=payload,
+        media_type=asset.content_type or "image/jpeg",
+        headers={
+            "Cache-Control": "public, max-age=31536000, immutable",
+            "X-Robots-Tag": "noindex, nofollow, noarchive",
+        },
+    )

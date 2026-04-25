@@ -220,6 +220,28 @@ class MarketWatch(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
 
+class MediaAsset(Base):
+    __tablename__ = "media_assets"
+    __table_args__ = (
+        UniqueConstraint("source_url_hash", name="uq_media_asset_source_url_hash"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    provider: Mapped[str] = mapped_column(String(32), index=True)
+    owner_type: Mapped[str] = mapped_column(String(32), index=True)
+    owner_id: Mapped[str] = mapped_column(String(128), index=True)
+    source_url: Mapped[str] = mapped_column(String(2048))
+    source_url_hash: Mapped[str] = mapped_column(String(64), index=True)
+    content_type: Mapped[str] = mapped_column(String(128), default="image/jpeg")
+    storage_path: Mapped[str] = mapped_column(String(512))
+    size_bytes: Mapped[int] = mapped_column(Integer, default=0)
+    checksum: Mapped[str | None] = mapped_column(String(128), nullable=True, index=True)
+    is_archived: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
+    error_message: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+
 class SeoPage(Base):
     __tablename__ = "seo_pages"
     __table_args__ = (UniqueConstraint("slug_path", name="uq_seo_page_slug_path"),)
