@@ -227,8 +227,10 @@ class LocalMarketListingRead(BaseModel):
     region: str | None = None
     url: str | None = None
     photo_url: str | None = None
+    image_urls_json: list[str] = Field(default_factory=list)
     is_active: bool
     is_sold: bool | None = None
+    removal_status: str | None = None
     first_seen_at: datetime
     last_seen_at: datetime
     sold_detected_at: datetime | None = None
@@ -246,6 +248,32 @@ class AutoRiaSnapshotResponse(BaseModel):
 class LocalMarketSoldTodayResponse(BaseModel):
     items: list[LocalMarketListingRead]
     total_count: int
+
+
+class LocalMarketBucket(BaseModel):
+    label: str
+    min_usd: int | None = None
+    max_usd: int | None = None
+    total_count: int
+    sold_count: int
+    removed_count: int
+    avg_price_usd: float | None = None
+    median_price_usd: float | None = None
+
+
+class LocalMarketPeriodStats(BaseModel):
+    days: int
+    total_count: int
+    sold_count: int
+    removed_count: int
+    avg_price_usd: float | None = None
+    median_price_usd: float | None = None
+    buckets: list[LocalMarketBucket]
+
+
+class LocalMarketStatsResponse(BaseModel):
+    provider: str = "autoria"
+    periods: list[LocalMarketPeriodStats]
 
 
 class AdvisorReportCreate(BaseModel):

@@ -5,8 +5,8 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.db import get_db
-from app.schemas import AutoRiaSnapshotResponse, LocalMarketListingRead, LocalMarketSoldTodayResponse
-from app.services.autoria_market import run_autoria_snapshot, sold_or_removed_since
+from app.schemas import AutoRiaSnapshotResponse, LocalMarketListingRead, LocalMarketSoldTodayResponse, LocalMarketStatsResponse
+from app.services.autoria_market import local_market_items, local_market_stats, run_autoria_snapshot, sold_or_removed_since
 
 router = APIRouter(prefix="/api/v1/autoria", tags=["autoria"])
 
@@ -57,3 +57,22 @@ def get_autoria_sold_today(
         items=[LocalMarketListingRead.model_validate(item) for item in items],
         total_count=len(items),
     )
+
+
+@router.get("/market", response_model=LocalMarketSoldTodayResponse)
+def get_autoria_market_items(
+    hours: int = Query(default=24, ge=1, le=24 * 30),
+    limit: int = Query(default=100, ge=1, le=500),
+    status: str = Query(default="all", pattern="^(all|sold|removed)$"),
+    db: Session = Depends(get_db),
+) -> LocalMarketSoldTodayResponse:
+    items = local_market_items(db, hours=hours, limit=limit, status=status)
+    return LocalMarketSoldTodayResponse(
+        items=[LocalMarketListingRead.model_validate(item) for item in items],
+        total_count=len(items),
+    )
+
+
+@router.get("/stats", response_model=LocalMarketStatsResponse)
+def get_autoria_market_stats(db: Session = Depends(get_db)) -> LocalMarketStatsResponse:
+    return local_market_stats(db)

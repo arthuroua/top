@@ -19,6 +19,7 @@ export function SiteHeader() {
         <nav className="siteNav">
           <Link href="/search">{dict.nav.search}</Link>
           <Link href="/cars">{dict.nav.catalog}</Link>
+          <Link href="/local-market">{dict.nav.localMarket}</Link>
           <Link href="/watchlist">{dict.nav.watchlist}</Link>
           <Link href="/search#toolkit">{dict.nav.calculator}</Link>
           <Link href="/about">{dict.nav.about}</Link>
