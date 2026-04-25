@@ -93,8 +93,22 @@ def _get_json(url: str, timeout: float) -> Any:
             "User-Agent": "auto-import-hub/0.1 local-market",
         },
     )
-    with urlopen(request, timeout=timeout) as response:
-        return json.loads(response.read().decode("utf-8"))
+    try:
+        with urlopen(request, timeout=timeout) as response:
+            return json.loads(response.read().decode("utf-8"))
+    except HTTPError as exc:
+        body = ""
+        try:
+            body = exc.read().decode("utf-8", errors="replace")[:500]
+        except OSError:
+            body = ""
+        raise RuntimeError(f"Auto.RIA API returned HTTP {exc.code}: {body or exc.reason}") from exc
+    except URLError as exc:
+        raise RuntimeError(f"Auto.RIA API connection failed: {exc.reason}") from exc
+    except TimeoutError as exc:
+        raise RuntimeError("Auto.RIA API request timed out") from exc
+    except json.JSONDecodeError as exc:
+        raise RuntimeError("Auto.RIA API returned invalid JSON") from exc
 
 
 def _as_int(value: Any) -> int | None:
@@ -254,7 +268,7 @@ def run_autoria_snapshot(
     for listing_id in unique_ids[:details_limit]:
         try:
             info = _get_json(_info_url(config, listing_id), config.timeout_seconds)
-        except (HTTPError, URLError, TimeoutError, OSError, json.JSONDecodeError):
+        except RuntimeError:
             continue
         if isinstance(info, list) and info:
             info = info[0]

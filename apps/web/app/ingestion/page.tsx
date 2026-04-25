@@ -246,10 +246,16 @@ async function readApiError(response: Response, fallback: string): Promise<strin
     if (typeof json.detail === "string" && json.detail.trim()) {
       return json.detail;
     }
+    if (Array.isArray(json.detail)) {
+      return json.detail.map((item) => JSON.stringify(item)).join(" | ");
+    }
+    if (json.detail && typeof json.detail === "object") {
+      return JSON.stringify(json.detail);
+    }
   } catch {
     // ignore parse errors and return fallback
   }
-  return fallback;
+  return `${fallback} (HTTP ${response.status})`;
 }
 
 function readStoredBoolean(key: string, fallback: boolean): boolean {

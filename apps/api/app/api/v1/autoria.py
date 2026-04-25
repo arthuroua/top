@@ -2,6 +2,7 @@ import os
 import secrets
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.db import get_db
@@ -43,6 +44,8 @@ def create_autoria_snapshot(
         )
     except RuntimeError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except SQLAlchemyError as exc:
+        raise HTTPException(status_code=503, detail=f"Database error while saving Auto.RIA snapshot: {exc}") from exc
 
 
 @router.get("/sold-today", response_model=LocalMarketSoldTodayResponse)
