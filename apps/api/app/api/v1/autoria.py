@@ -16,6 +16,7 @@ from app.schemas import (
     MarketWatchCreate,
     MarketWatchDetailResponse,
     MarketWatchRead,
+    MarketWatchRunAllResponse,
 )
 from app.services.autoria_market import (
     active_watch_items,
@@ -24,6 +25,7 @@ from app.services.autoria_market import (
     local_market_items,
     local_market_stats,
     run_autoria_snapshot,
+    run_all_market_watches,
     run_market_watch,
     sold_or_removed_since,
 )
@@ -164,3 +166,21 @@ def run_watch(
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     except SQLAlchemyError as exc:
         raise HTTPException(status_code=503, detail=f"Database error while saving Auto.RIA watch: {exc}") from exc
+
+
+@router.post("/watches/run-all", response_model=MarketWatchRunAllResponse)
+def run_all_watches(
+    max_watches: int | None = Query(default=None, ge=1, le=100),
+    max_pages: int | None = Query(default=None, ge=1, le=100),
+    sleep_min_seconds: int = Query(default=30, ge=0, le=3600),
+    sleep_max_seconds: int = Query(default=180, ge=0, le=3600),
+    _: None = Depends(_require_admin),
+    db: Session = Depends(get_db),
+) -> MarketWatchRunAllResponse:
+    return run_all_market_watches(
+        db,
+        max_watches=max_watches,
+        max_pages=max_pages,
+        sleep_min_seconds=sleep_min_seconds,
+        sleep_max_seconds=sleep_max_seconds,
+    )

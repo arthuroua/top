@@ -308,6 +308,22 @@ class MarketWatchDetailResponse(BaseModel):
     changed_items: list[LocalMarketListingRead]
 
 
+class MarketWatchRunItem(BaseModel):
+    slug: str
+    name: str
+    success: bool
+    error: str | None = None
+    result: AutoRiaSnapshotResponse | None = None
+
+
+class MarketWatchRunAllResponse(BaseModel):
+    total_watches: int
+    attempted: int
+    succeeded: int
+    failed: int
+    items: list[MarketWatchRunItem]
+
+
 class AdvisorReportCreate(BaseModel):
     vin: str = Field(min_length=17, max_length=17)
     assumptions: AdvisorInput

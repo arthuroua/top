@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import random
 import re
 import time
 from dataclasses import dataclass
@@ -16,7 +17,14 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models import LocalMarketListing, MarketWatch
-from app.schemas import AutoRiaSnapshotResponse, LocalMarketBucket, LocalMarketPeriodStats, LocalMarketStatsResponse
+from app.schemas import (
+    AutoRiaSnapshotResponse,
+    LocalMarketBucket,
+    LocalMarketPeriodStats,
+    LocalMarketStatsResponse,
+    MarketWatchRunAllResponse,
+    MarketWatchRunItem,
+)
 from app.services.media_archive import archive_image, public_media_url
 
 
@@ -477,6 +485,45 @@ def run_market_watch(db: Session, watch: MarketWatch, *, max_pages: int | None =
     db.commit()
     db.refresh(watch)
     return result
+
+
+def run_all_market_watches(
+    db: Session,
+    *,
+    max_watches: int | None = None,
+    max_pages: int | None = None,
+    sleep_min_seconds: int = 30,
+    sleep_max_seconds: int = 180,
+) -> MarketWatchRunAllResponse:
+    watches = (
+        db.execute(select(MarketWatch).where(MarketWatch.is_active.is_(True)).order_by(MarketWatch.last_run_at.asc().nulls_first()))
+        .scalars()
+        .all()
+    )
+    selected = watches[:max_watches] if max_watches is not None else watches
+    items: list[MarketWatchRunItem] = []
+    min_sleep = max(0, sleep_min_seconds)
+    max_sleep = max(min_sleep, sleep_max_seconds)
+
+    for index, watch in enumerate(selected):
+        try:
+            result = run_market_watch(db, watch, max_pages=max_pages)
+            items.append(MarketWatchRunItem(slug=watch.slug, name=watch.name, success=True, result=result))
+        except (RuntimeError, OSError) as exc:
+            db.rollback()
+            items.append(MarketWatchRunItem(slug=watch.slug, name=watch.name, success=False, error=str(exc)))
+
+        if index < len(selected) - 1 and max_sleep > 0:
+            time.sleep(random.randint(min_sleep, max_sleep))
+
+    succeeded = sum(1 for item in items if item.success)
+    return MarketWatchRunAllResponse(
+        total_watches=len(watches),
+        attempted=len(selected),
+        succeeded=succeeded,
+        failed=len(items) - succeeded,
+        items=items,
+    )
 
 
 def active_watch_items(db: Session, watch: MarketWatch, *, limit: int = 80) -> list[LocalMarketListing]:
