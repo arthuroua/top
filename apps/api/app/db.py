@@ -8,7 +8,7 @@ from sqlalchemy import create_engine, inspect
 from sqlalchemy.orm import Session, declarative_base, sessionmaker
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./carimport.db")
-ALEMBIC_REVISION_HEAD = "20260423_000002"
+ALEMBIC_REVISION_HEAD = "20260425_000003"
 
 
 def _normalize_database_url(url: str) -> str:

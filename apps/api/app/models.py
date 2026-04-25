@@ -161,6 +161,41 @@ class IngestionConnectorRun(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), index=True)
 
 
+class LocalMarketListing(Base):
+    __tablename__ = "local_market_listings"
+    __table_args__ = (
+        UniqueConstraint("provider", "listing_id", name="uq_local_market_provider_listing"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    provider: Mapped[str] = mapped_column(String(32), index=True)
+    listing_id: Mapped[str] = mapped_column(String(64), index=True)
+    query_label: Mapped[str] = mapped_column(String(128), index=True, default="default")
+    query_hash: Mapped[str] = mapped_column(String(64), index=True)
+    title: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    make: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    model: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    year: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
+    price_usd: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
+    price_uah: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    price_eur: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    mileage_km: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    fuel_name: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    gearbox_name: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    city: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    region: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    url: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+    photo_url: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, index=True, default=True)
+    is_sold: Mapped[bool | None] = mapped_column(Boolean, nullable=True, index=True)
+    first_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), index=True)
+    last_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), index=True)
+    sold_detected_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, index=True)
+    payload_json: Mapped[dict] = mapped_column(JSON)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+
 class SeoPage(Base):
     __tablename__ = "seo_pages"
     __table_args__ = (UniqueConstraint("slug_path", name="uq_seo_page_slug_path"),)

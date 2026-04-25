@@ -209,6 +209,45 @@ class MarketDataHealthResponse(BaseModel):
     providers: list[MarketProviderHealth]
 
 
+class LocalMarketListingRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    provider: str
+    listing_id: str
+    title: str | None = None
+    make: str | None = None
+    model: str | None = None
+    year: int | None = None
+    price_usd: int | None = None
+    price_uah: int | None = None
+    mileage_km: int | None = None
+    fuel_name: str | None = None
+    gearbox_name: str | None = None
+    city: str | None = None
+    region: str | None = None
+    url: str | None = None
+    photo_url: str | None = None
+    is_active: bool
+    is_sold: bool | None = None
+    first_seen_at: datetime
+    last_seen_at: datetime
+    sold_detected_at: datetime | None = None
+
+
+class AutoRiaSnapshotResponse(BaseModel):
+    provider: str = "autoria"
+    query_label: str
+    active_ids_seen: int
+    listings_upserted: int
+    sold_or_removed_detected: int
+    skipped_details: int
+
+
+class LocalMarketSoldTodayResponse(BaseModel):
+    items: list[LocalMarketListingRead]
+    total_count: int
+
+
 class AdvisorReportCreate(BaseModel):
     vin: str = Field(min_length=17, max_length=17)
     assumptions: AdvisorInput

@@ -70,6 +70,32 @@ type EnrichmentProcessResult = {
   images_added: number;
 };
 
+type AutoRiaSnapshotResult = {
+  provider: string;
+  query_label: string;
+  active_ids_seen: number;
+  listings_upserted: number;
+  sold_or_removed_detected: number;
+  skipped_details: number;
+};
+
+type AutoRiaSoldTodayResult = {
+  total_count: number;
+  items: Array<{
+    listing_id: string;
+    title: string | null;
+    make: string | null;
+    model: string | null;
+    year: number | null;
+    price_usd: number | null;
+    mileage_km: number | null;
+    city: string | null;
+    region: string | null;
+    url: string | null;
+    sold_detected_at: string | null;
+  }>;
+};
+
 type ConnectorStatus = {
   provider: "copart" | "iaai";
   mode: string;
@@ -275,6 +301,8 @@ export default function IngestionPage() {
   const [loadingEnrichmentDepth, setLoadingEnrichmentDepth] = useState(false);
   const [loadingEnrichmentEnqueue, setLoadingEnrichmentEnqueue] = useState(false);
   const [loadingEnrichmentProcess, setLoadingEnrichmentProcess] = useState(false);
+  const [loadingAutoRiaSnapshot, setLoadingAutoRiaSnapshot] = useState(false);
+  const [loadingAutoRiaSoldToday, setLoadingAutoRiaSoldToday] = useState(false);
 
   const [error, setError] = useState("");
   const [enqueueResult, setEnqueueResult] = useState<IngestionEnqueueResponse | null>(null);
@@ -284,6 +312,8 @@ export default function IngestionPage() {
   const [enrichmentDepthResult, setEnrichmentDepthResult] = useState<EnrichmentQueueDepth | null>(null);
   const [enrichmentEnqueueResult, setEnrichmentEnqueueResult] = useState<EnrichmentEnqueueResult | null>(null);
   const [enrichmentProcessResult, setEnrichmentProcessResult] = useState<EnrichmentProcessResult | null>(null);
+  const [autoRiaSnapshotResult, setAutoRiaSnapshotResult] = useState<AutoRiaSnapshotResult | null>(null);
+  const [autoRiaSoldTodayResult, setAutoRiaSoldTodayResult] = useState<AutoRiaSoldTodayResult | null>(null);
   const [adminToken, setAdminToken] = useState<string>(() => {
     if (typeof window === "undefined") return "";
     try {
@@ -577,6 +607,44 @@ export default function IngestionPage() {
       setError(err instanceof Error ? err.message : "Request failed");
     } finally {
       setLoadingCopartCsvRun(false);
+    }
+  }
+
+  async function runAutoRiaSnapshot() {
+    setError("");
+    setAutoRiaSnapshotResult(null);
+    setLoadingAutoRiaSnapshot(true);
+    try {
+      const params = new URLSearchParams({ query_label: "ukraine-market", max_pages: "1" });
+      const res = await fetch(`${API_BASE}/api/v1/autoria/snapshot?${params.toString()}`, {
+        method: "POST",
+        headers: { "X-Admin-Token": adminToken.trim() }
+      });
+      if (!res.ok) throw new Error(await readApiError(res, "Failed to run Auto.RIA snapshot"));
+      const json = (await res.json()) as AutoRiaSnapshotResult;
+      setAutoRiaSnapshotResult(json);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Request failed");
+    } finally {
+      setLoadingAutoRiaSnapshot(false);
+    }
+  }
+
+  async function loadAutoRiaSoldToday() {
+    setError("");
+    setAutoRiaSoldTodayResult(null);
+    setLoadingAutoRiaSoldToday(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/v1/autoria/sold-today?hours=24&limit=100`, {
+        headers: { "X-Admin-Token": adminToken.trim() }
+      });
+      if (!res.ok) throw new Error(await readApiError(res, "Failed to load Auto.RIA sold today"));
+      const json = (await res.json()) as AutoRiaSoldTodayResult;
+      setAutoRiaSoldTodayResult(json);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Request failed");
+    } finally {
+      setLoadingAutoRiaSoldToday(false);
     }
   }
 
@@ -1199,6 +1267,12 @@ export default function IngestionPage() {
           <button type="button" onClick={processOneEnrichment} disabled={loadingEnrichmentProcess || !adminToken.trim()}>
             {loadingEnrichmentProcess ? "Enriching One" : "Process One Enrichment"}
           </button>
+          <button type="button" onClick={runAutoRiaSnapshot} disabled={loadingAutoRiaSnapshot || !adminToken.trim()}>
+            {loadingAutoRiaSnapshot ? "Scanning Auto.RIA" : "Run Auto.RIA Snapshot"}
+          </button>
+          <button type="button" onClick={loadAutoRiaSoldToday} disabled={loadingAutoRiaSoldToday || !adminToken.trim()}>
+            {loadingAutoRiaSoldToday ? "Loading Auto.RIA" : "Auto.RIA Sold Today"}
+          </button>
         </div>
 
         {depthResult && (
@@ -1252,6 +1326,33 @@ export default function IngestionPage() {
                 : "-"}
             </p>
             <p>Images added: {enrichmentProcessResult.images_added}</p>
+          </div>
+        )}
+
+        {autoRiaSnapshotResult && (
+          <div className="panel reportSaved">
+            <p className="label">Auto.RIA Snapshot</p>
+            <p>Query: {autoRiaSnapshotResult.query_label}</p>
+            <p>Active IDs seen: {autoRiaSnapshotResult.active_ids_seen}</p>
+            <p>Listings saved/updated: {autoRiaSnapshotResult.listings_upserted}</p>
+            <p>Sold or removed detected: {autoRiaSnapshotResult.sold_or_removed_detected}</p>
+            <p>Skipped details: {autoRiaSnapshotResult.skipped_details}</p>
+          </div>
+        )}
+
+        {autoRiaSoldTodayResult && (
+          <div className="panel reportSaved">
+            <p className="label">Auto.RIA Sold / Removed Last 24h</p>
+            <h3>{autoRiaSoldTodayResult.total_count}</h3>
+            {autoRiaSoldTodayResult.items.length === 0 && (
+              <p>No disappeared listings detected yet. Run at least two snapshots with some time between them.</p>
+            )}
+            {autoRiaSoldTodayResult.items.slice(0, 12).map((item) => (
+              <p key={item.listing_id}>
+                {item.year || "-"} {item.make || ""} {item.model || ""} · ${item.price_usd ?? "-"} ·{" "}
+                {item.city || item.region || "-"} · {item.url ? <a href={item.url}>open</a> : item.listing_id}
+              </p>
+            ))}
           </div>
         )}
 
