@@ -192,8 +192,9 @@ function collectImages(lots: LotResponse[]): string[] {
   for (const lot of lots) {
     for (const image of lot.images) {
       const resolved = toDisplayImageUrl(image.image_url);
-      if (!isDirectImageUrl(resolved) || seen.has(resolved)) continue;
-      seen.add(resolved);
+      const dedupeKey = image.checksum ? `checksum:${image.checksum}` : `url:${resolved}`;
+      if (!isDirectImageUrl(resolved) || seen.has(dedupeKey)) continue;
+      seen.add(dedupeKey);
       urls.push(resolved);
       if (urls.length >= 10) return urls;
     }
@@ -485,23 +486,7 @@ export default async function AutoSeoPage({ params }: PageProps) {
               <p className="muted">Latest lot spotlight with the fastest way to judge whether the car still makes sense.</p>
             </div>
           </div>
-          <div className={`lotSpotlightGrid ${latestLotImages.length <= 1 ? "lotSpotlightGridNoGallery" : ""}`}>
-            {latestLotImages.length > 1 && (
-              <div className="lotSpotlightGallery">
-                <>
-                  <a href={latestLotImages[0]} target="_blank" rel="noreferrer" className="mainPhotoLink">
-                    <img src={latestLotImages[0]} alt={`${vehicleName} latest lot main`} className="mainPhoto" />
-                  </a>
-                  <div className="thumbGrid">
-                    {latestLotImages.slice(1).map((url, imageIndex) => (
-                      <a key={`${url}-${imageIndex}`} href={url} target="_blank" rel="noreferrer" className="thumbLink">
-                        <img src={url} alt={`${vehicleName} latest lot ${imageIndex + 2}`} className="thumbPhoto" loading="lazy" />
-                      </a>
-                    ))}
-                  </div>
-                </>
-              </div>
-            )}
+          <div className="lotSpotlightGrid lotSpotlightGridNoGallery">
             <div className="lotSpotlightFacts">
               <div className="purchasePriceHero spotlightPriceHero">
                 <p>{lotPriceLabel(latestLot, dict)}</p>

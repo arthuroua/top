@@ -66,9 +66,14 @@ def _to_lot_item(lot: Lot) -> LotItem:
 
     if hide_data_source():
         safe_images: list[LotImageItem] = []
+        seen_images: set[str] = set()
         for index, image in enumerate(images):
             if not _is_direct_image_url(image.image_url):
                 continue
+            image_key = f"checksum:{image.checksum}" if image.checksum else f"url:{image.image_url}"
+            if image_key in seen_images:
+                continue
+            seen_images.add(image_key)
             if image.image_url.startswith("/api/v1/media/archive/"):
                 safe_images.append(
                     LotImageItem(
@@ -78,22 +83,29 @@ def _to_lot_item(lot: Lot) -> LotItem:
                     )
                 )
                 continue
+            public_url = f"/api/v1/media/vehicles/{lot.vin}/lots/{lot.lot_number}/images/{index}"
             safe_images.append(
                 LotImageItem(
-                    image_url=f"/api/v1/media/vehicles/{lot.vin}/lots/{lot.lot_number}/images/{index}",
+                    image_url=public_url,
                     shot_order=image.shot_order,
                     checksum=image.checksum,
                 )
             )
     else:
-        safe_images = [
-            LotImageItem(
-                image_url=image.image_url,
-                shot_order=image.shot_order,
-                checksum=image.checksum,
+        safe_images = []
+        seen_images = set()
+        for image in images:
+            image_key = f"checksum:{image.checksum}" if image.checksum else f"url:{image.image_url}"
+            if image_key in seen_images:
+                continue
+            seen_images.add(image_key)
+            safe_images.append(
+                LotImageItem(
+                    image_url=image.image_url,
+                    shot_order=image.shot_order,
+                    checksum=image.checksum,
+                )
             )
-            for image in images
-        ]
 
     return LotItem(
         source=public_source_label() if hide_data_source() else lot.source,
