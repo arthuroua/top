@@ -42,6 +42,36 @@ def _normalize_url(url: str) -> str:
     return value
 
 
+def _fetch_upstream_image(source_url: str, *, cache_seconds: int = 3600) -> Response:
+    normalized_url = _normalize_url(source_url)
+    if not _is_host_allowed(normalized_url):
+        raise HTTPException(status_code=403, detail="Image host is not allowed")
+
+    request = Request(
+        normalized_url,
+        headers={
+            "Accept": "image/*,*/*;q=0.8",
+            "User-Agent": "car-import-mvp/0.1 media-proxy",
+        },
+        method="GET",
+    )
+
+    try:
+        with urlopen(request, timeout=20) as upstream:
+            payload = upstream.read()
+            content_type = upstream.headers.get_content_type() or mimetypes.guess_type(normalized_url)[0] or "image/jpeg"
+            return Response(
+                content=payload,
+                media_type=content_type,
+                headers={"Cache-Control": f"public, max-age={cache_seconds}"},
+            )
+    except HTTPError as exc:
+        status = exc.code if exc.code in {400, 401, 403, 404} else 502
+        raise HTTPException(status_code=status, detail="Unable to fetch image from upstream") from exc
+    except (URLError, TimeoutError, OSError) as exc:
+        raise HTTPException(status_code=502, detail="Unable to fetch image from upstream") from exc
+
+
 @router.get("/vehicles/{vin}/lots/{lot_number}/images/{image_index}")
 def proxy_lot_image(vin: str, lot_number: str, image_index: int, db: Session = Depends(get_db)) -> Response:
     if image_index < 0:
@@ -68,32 +98,7 @@ def proxy_lot_image(vin: str, lot_number: str, image_index: int, db: Session = D
     if source_url.startswith("/api/v1/media/archive/"):
         asset_id = source_url.rstrip("/").split("/")[-1]
         return get_archived_image(asset_id, db)
-    if not _is_host_allowed(source_url):
-        raise HTTPException(status_code=403, detail="Image host is not allowed")
-
-    request = Request(
-        source_url,
-        headers={
-            "Accept": "image/*,*/*;q=0.8",
-            "User-Agent": "car-import-mvp/0.1 media-proxy",
-        },
-        method="GET",
-    )
-
-    try:
-        with urlopen(request, timeout=20) as upstream:
-            payload = upstream.read()
-            content_type = upstream.headers.get_content_type() or mimetypes.guess_type(source_url)[0] or "image/jpeg"
-            return Response(
-                content=payload,
-                media_type=content_type,
-                headers={"Cache-Control": "public, max-age=3600"},
-            )
-    except HTTPError as exc:
-        status = exc.code if exc.code in {400, 401, 403, 404} else 502
-        raise HTTPException(status_code=status, detail="Unable to fetch image from upstream") from exc
-    except (URLError, TimeoutError, OSError) as exc:
-        raise HTTPException(status_code=502, detail="Unable to fetch image from upstream") from exc
+    return _fetch_upstream_image(source_url)
 
 
 @router.get("/archive/{asset_id}")
@@ -105,6 +110,8 @@ def get_archived_image(asset_id: str, db: Session = Depends(get_db)) -> Response
     try:
         payload = open(asset.storage_path, "rb").read()
     except OSError as exc:
+        if asset.source_url:
+            return _fetch_upstream_image(asset.source_url)
         raise HTTPException(status_code=404, detail="Archived image file not found") from exc
 
     return Response(
