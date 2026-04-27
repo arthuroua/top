@@ -186,20 +186,25 @@ function isDirectImageUrl(value: string): boolean {
   return [".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp", ".avif"].some((ext) => pathOnly.endsWith(ext));
 }
 
+function isLegacyVehicleImageUrl(value: string): boolean {
+  return toDisplayImageUrl(value).toLowerCase().includes("/api/v1/media/vehicles/");
+}
+
 function collectImages(lots: LotResponse[]): string[] {
   const seen = new Set<string>();
-  const urls: string[] = [];
+  const candidates: string[] = [];
   for (const lot of lots) {
     for (const image of lot.images) {
       const resolved = toDisplayImageUrl(image.image_url);
       const dedupeKey = image.checksum ? `checksum:${image.checksum}` : `url:${resolved}`;
       if (!isDirectImageUrl(resolved) || seen.has(dedupeKey)) continue;
       seen.add(dedupeKey);
-      urls.push(resolved);
-      if (urls.length >= 10) return urls;
+      candidates.push(resolved);
     }
   }
-  return urls;
+  const preferred = candidates.filter((url) => !isLegacyVehicleImageUrl(url));
+  const urls = preferred.length > 0 ? preferred : candidates;
+  return urls.slice(0, 40);
 }
 
 function toYesNo(value: boolean | null | undefined): string {
@@ -326,7 +331,7 @@ export default async function AutoSeoPage({ params }: PageProps) {
   const images = collectImages(lots);
   const latestLot = lots[0];
   const auctionSpecRows = buildAuctionSpecRows(latestLot);
-  const latestLotImages = latestLot ? collectImages([latestLot]).slice(0, 6) : [];
+  const latestLotImages = latestLot ? collectImages([latestLot]) : [];
   const relatedClusterHref =
     vehicle.make && vehicle.model && vehicle.year
       ? `/cars/${slugify(vehicle.make)}/${slugify(vehicle.model)}/${vehicle.year}`

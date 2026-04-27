@@ -36,7 +36,7 @@ def copart_gallery_enabled() -> bool:
 
 
 def copart_gallery_max_images() -> int:
-    return _env_int("COPART_GALLERY_MAX_IMAGES_PER_LOT", 8, minimum=1, maximum=40)
+    return _env_int("COPART_GALLERY_MAX_IMAGES_PER_LOT", 40, minimum=1, maximum=40)
 
 
 def copart_gallery_url(lot_number: str, image_url: str | None = None) -> str:
@@ -64,8 +64,9 @@ def _normalize_image_url(value: Any) -> str | None:
 
 def _best_link(links: list[dict[str, Any]]) -> str | None:
     for predicate in (
-        lambda item: item.get("isHdImage") is False and item.get("isThumbNail") is False,
         lambda item: item.get("isHdImage") is True and item.get("isThumbNail") is False,
+        lambda item: "_ful" in str(item.get("url") or "").lower() and item.get("isThumbNail") is False,
+        lambda item: item.get("isHdImage") is False and item.get("isThumbNail") is False,
         lambda item: item.get("isThumbNail") is False,
         lambda item: True,
     ):

@@ -32,7 +32,7 @@ export function AutoPhotoGallery({ images, vehicleName }: AutoPhotoGalleryProps)
         </button>
         {images.length > 1 && (
           <div className="autoTopThumbs">
-            {images.slice(1, 5).map((url, imageIndex) => (
+            {images.slice(1).map((url, imageIndex) => (
               <button key={`${url}-top-${imageIndex}`} type="button" onClick={() => setActiveIndex(imageIndex + 1)}>
                 <img src={url} alt={`${vehicleName} auction photo ${imageIndex + 2}`} loading="lazy" />
               </button>
