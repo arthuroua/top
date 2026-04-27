@@ -10,6 +10,11 @@ type AutoPhotoGalleryProps = {
 export function AutoPhotoGallery({ images, vehicleName }: AutoPhotoGalleryProps) {
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const activeImage = activeIndex === null ? null : images[activeIndex];
+  const featuredThumbs = images.slice(1, 5);
+  const restThumbs = images.slice(5);
+
+  const showPrevious = () => setActiveIndex((current) => Math.max(0, (current || 0) - 1));
+  const showNext = () => setActiveIndex((current) => Math.min(images.length - 1, (current || 0) + 1));
 
   useEffect(() => {
     if (activeIndex === null) return;
@@ -30,13 +35,25 @@ export function AutoPhotoGallery({ images, vehicleName }: AutoPhotoGalleryProps)
         <button type="button" className="autoTopMainPhoto" onClick={() => setActiveIndex(0)}>
           <img src={images[0]} alt={`${vehicleName} main auction photo`} loading="eager" />
         </button>
-        {images.length > 1 && (
+        {featuredThumbs.length > 0 && (
           <div className="autoTopThumbs">
-            {images.slice(1).map((url, imageIndex) => (
+            {featuredThumbs.map((url, imageIndex) => (
               <button key={`${url}-top-${imageIndex}`} type="button" onClick={() => setActiveIndex(imageIndex + 1)}>
                 <img src={url} alt={`${vehicleName} auction photo ${imageIndex + 2}`} loading="lazy" />
               </button>
             ))}
+          </div>
+        )}
+        {restThumbs.length > 0 && (
+          <div className="autoTopMoreThumbs" aria-label={`${vehicleName} more auction photos`}>
+            {restThumbs.map((url, imageIndex) => {
+              const realIndex = imageIndex + 5;
+              return (
+                <button key={`${url}-more-${imageIndex}`} type="button" onClick={() => setActiveIndex(realIndex)}>
+                  <img src={url} alt={`${vehicleName} auction photo ${realIndex + 1}`} loading="lazy" />
+                </button>
+              );
+            })}
           </div>
         )}
       </div>
@@ -48,16 +65,26 @@ export function AutoPhotoGallery({ images, vehicleName }: AutoPhotoGalleryProps)
             <button type="button" className="photoLightboxClose" onClick={() => setActiveIndex(null)}>
               X
             </button>
+            {images.length > 1 && (
+              <>
+                <button type="button" className="photoLightboxArrow photoLightboxArrowPrev" onClick={showPrevious} aria-label="Previous photo">
+                  ‹
+                </button>
+                <button type="button" className="photoLightboxArrow photoLightboxArrowNext" onClick={showNext} aria-label="Next photo">
+                  ›
+                </button>
+              </>
+            )}
             <img src={activeImage} alt={`${vehicleName} auction photo preview`} />
             {images.length > 1 && (
               <div className="photoLightboxNav">
-                <button type="button" onClick={() => setActiveIndex((current) => Math.max(0, (current || 0) - 1))}>
+                <button type="button" onClick={showPrevious}>
                   Prev
                 </button>
                 <span>
                   {(activeIndex || 0) + 1} / {images.length}
                 </span>
-                <button type="button" onClick={() => setActiveIndex((current) => Math.min(images.length - 1, (current || 0) + 1))}>
+                <button type="button" onClick={showNext}>
                   Next
                 </button>
               </div>

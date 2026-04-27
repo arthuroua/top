@@ -1436,12 +1436,13 @@ select:focus {
 .autoTopGallery {
   margin-top: 16px;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(250px, 360px);
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 0.42fr);
   gap: 12px;
 }
 
 .autoTopMainPhoto,
-.autoTopThumbs button {
+.autoTopThumbs button,
+.autoTopMoreThumbs button {
   display: block;
   width: 100%;
   padding: 0;
@@ -1455,11 +1456,12 @@ select:focus {
 
 .autoTopMainPhoto img {
   width: 100%;
-  height: auto;
-  max-height: 560px;
-  aspect-ratio: 16 / 10;
+  height: 100%;
+  min-height: 430px;
+  max-height: 620px;
+  aspect-ratio: 4 / 3;
   display: block;
-  object-fit: contain;
+  object-fit: cover;
   background: #eaf1f8;
 }
 
@@ -1467,12 +1469,33 @@ select:focus {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
-  max-height: 560px;
-  overflow: auto;
-  padding-right: 4px;
+  align-content: stretch;
 }
 
 .autoTopThumbs img {
+  width: 100%;
+  height: 100%;
+  min-height: 132px;
+  aspect-ratio: 1 / 1;
+  display: block;
+  object-fit: cover;
+}
+
+.autoTopMoreThumbs {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 2px 2px 8px;
+}
+
+.autoTopMoreThumbs button {
+  flex: 0 0 92px;
+  border-radius: 14px;
+  box-shadow: none;
+}
+
+.autoTopMoreThumbs img {
   width: 100%;
   aspect-ratio: 4 / 3;
   display: block;
@@ -1599,6 +1622,28 @@ select:focus {
   border-radius: 24px;
   background: rgba(255, 255, 255, 0.96);
   box-shadow: 0 30px 90px rgba(5, 14, 28, 0.36);
+}
+
+.photoLightboxArrow {
+  position: absolute;
+  top: 48%;
+  z-index: 2;
+  width: 48px;
+  height: 58px;
+  border: 0;
+  border-radius: 999px;
+  color: #ffffff;
+  background: rgba(8, 16, 28, 0.62);
+  font-size: 2.4rem;
+  line-height: 1;
+}
+
+.photoLightboxArrowPrev {
+  left: 24px;
+}
+
+.photoLightboxArrowNext {
+  right: 24px;
 }
 
 .photoLightboxPanel img {
@@ -2222,6 +2267,7 @@ select:focus {
   }
 
   .autoTopMainPhoto img {
+    min-height: 260px;
     max-height: 420px;
   }
 
@@ -2376,6 +2422,7 @@ select:focus {
   }
 
   .autoTopMainPhoto img {
+    min-height: 220px;
     max-height: 320px;
   }
 }
@@ -2466,7 +2513,7 @@ html[data-theme="dark"] .adminSeoItem {
 html[data-theme="dark"] .siteNav a:first-child,
 html[data-theme="dark"] .localePill.active,
 html[data-theme="dark"] .button,
-html[data-theme="dark"] button:not(.ghostButton):not(.localePill):not(.themeToggle):not(.photoLightboxBackdrop):not(.photoLightboxClose):not(.autoTopMainPhoto):not(.autoTopThumbs button) {
+html[data-theme="dark"] button:not(.ghostButton):not(.localePill):not(.themeToggle):not(.photoLightboxBackdrop):not(.photoLightboxClose):not(.photoLightboxArrow):not(.autoTopMainPhoto):not(.autoTopThumbs button):not(.autoTopMoreThumbs button) {
   color: #07111f;
   background: linear-gradient(180deg, #c5d9ff, #8fb9ff);
   box-shadow: 0 10px 24px rgba(143, 185, 255, 0.18);
@@ -2640,12 +2687,14 @@ html[data-theme="dark"] .localePill.active {
 }
 
 html[data-theme="dark"] .autoTopMainPhoto,
-html[data-theme="dark"] .autoTopThumbs button {
+html[data-theme="dark"] .autoTopThumbs button,
+html[data-theme="dark"] .autoTopMoreThumbs button {
   border-color: rgba(174, 196, 224, 0.18);
   background: rgba(12, 18, 28, 0.9);
 }
 
-html[data-theme="dark"] .photoLightboxClose {
+html[data-theme="dark"] .photoLightboxClose,
+html[data-theme="dark"] .photoLightboxArrow {
   color: #ffffff;
   background: rgba(8, 16, 28, 0.82);
 }
