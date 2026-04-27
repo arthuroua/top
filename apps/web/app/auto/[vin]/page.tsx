@@ -445,118 +445,89 @@ export default async function AutoSeoPage({ params }: PageProps) {
         </div>
       </article>
 
-      <section className="panel autoSeoSection">
+      <section className="panel autoSeoSection autoBidfaxSection">
         <div className="autoJumpNav">
           <a href="#vin-overview">{dict.auto.knowTitle}</a>
-          <a href="#vin-market">{dict.auto.marketTitle}</a>
           <a href="#vin-specs">{dict.auto.decoderTitle}</a>
           <a href="#vin-lots">{dict.auto.lotsTitle}</a>
+          <a href="#vin-market">{dict.auto.marketTitle}</a>
           <a href="#vin-history">{dict.auto.updateLogTitle}</a>
-          <a href="#vin-profit">{dict.auto.openCalculator}</a>
         </div>
-        <AutoPhotoGallery images={latestLotImages} vehicleName={vehicleName} />
-        <div className="autoSeoQuickFacts">
-          <div>
-            <p className="label">VIN</p>
-            <strong>{vin}</strong>
-          </div>
-          <div>
-            <p className="label">{lotPriceLabel(latestLot, dict)}</p>
-            <strong>{lotPriceValue(latestLot)}</strong>
-          </div>
-          <div>
-            <p className="label">{dict.search.market.lowerBound}</p>
-            <strong>{toMoney(lowerBound)}</strong>
-          </div>
-          <div>
-            <p className="label">{dict.search.market.median}</p>
-            <strong>{toMoney(medianPrice)}</strong>
-          </div>
-          <div>
-            <p className="label">{dict.search.kpiStatus}</p>
-            <strong>{latestLot?.status || "-"}</strong>
-          </div>
-          <div>
-            <p className="label">{dict.search.location}</p>
-            <strong>{latestLot?.location || "-"}</strong>
-          </div>
+        <div className="autoBidfaxGrid" id="vin-overview">
+          <AutoPhotoGallery images={latestLotImages} vehicleName={vehicleName} />
+          <aside className="autoBidfaxSummary">
+            <div className="purchasePriceHero">
+              <p>{lotPriceLabel(latestLot, dict)}</p>
+              <strong>{lotPriceValue(latestLot)}</strong>
+              <span>#{latestLot?.lot_number || "-"} - {latestLot?.status || "-"}</span>
+            </div>
+            <dl className="autoBidfaxFacts">
+              <div>
+                <dt>VIN</dt>
+                <dd>{vin}</dd>
+              </div>
+              <div>
+                <dt>{dict.search.location}</dt>
+                <dd>{latestLot?.location || "-"}</dd>
+              </div>
+              <div>
+                <dt>{dict.search.saleDate}</dt>
+                <dd>{latestLot?.sale_date || "-"}</dd>
+              </div>
+              <div>
+                <dt>{dict.search.market.lowerBound}</dt>
+                <dd>{toMoney(lowerBound)}</dd>
+              </div>
+              <div>
+                <dt>{dict.search.market.median}</dt>
+                <dd>{toMoney(medianPrice)}</dd>
+              </div>
+              <div>
+                <dt>{dict.auto.images}</dt>
+                <dd>{latestLotImages.length}</dd>
+              </div>
+            </dl>
+          </aside>
         </div>
       </section>
 
+      {riskAssessment && riskText && (
+        <section className="panel autoCompactNotice">
+          <strong>{dict.auto.riskTitle}: {riskText.title}</strong>
+          <span>{dict.search.risk.score}: {riskAssessment.score}/100</span>
+          {riskText.reasons.slice(0, 2).map((reason) => (
+            <span key={reason}>{reason}</span>
+          ))}
+        </section>
+      )}
+
       {latestLot && (
-        <section className="panel lotSpotlight" id="vin-overview">
-          <div className="sectionHead">
+        <section className="panel autoSeoSection autoCompactOverview">
+          <h2>{dict.auto.knowTitle}</h2>
+          <p>
+            {latestLot.source} #{latestLot.lot_number}. Status: {latestLot.status || "-"}. Location: {latestLot.location || "-"}.
+            Photos: {latestLotImages.length}.
+          </p>
+          <div className="autoSeoQuickFacts">
             <div>
-              <h2>{dict.auto.knowTitle}</h2>
-              <p className="muted">Latest lot spotlight with the fastest way to judge whether the car still makes sense.</p>
+              <p className="label">Damage</p>
+              <strong>{latestLot.primary_damage || "-"}</strong>
             </div>
-          </div>
-          <div className="lotSpotlightGrid lotSpotlightGridNoGallery">
-            <div className="lotSpotlightFacts">
-              <div className="purchasePriceHero spotlightPriceHero">
-                <p>{lotPriceLabel(latestLot, dict)}</p>
-                <strong>{lotPriceValue(latestLot)}</strong>
-                <span>
-                  #{latestLot.lot_number} · {latestLot.status || "-"}
-                </span>
-              </div>
-              <div className="spotlightFactCard">
-                <p className="label">{dict.search.source}</p>
-                <h3>{latestLot.source}</h3>
-                <p>#{latestLot.lot_number}</p>
-              </div>
-              <div className="spotlightFactCard">
-                <p className="label">{dict.search.saleDate}</p>
-                <h3>{latestLot.sale_date || "-"}</h3>
-                <p>{dict.search.location}: {latestLot.location || "-"}</p>
-              </div>
-              {lowerBound !== null && (
-                <div className="spotlightFactCard">
-                  <p className="label">{dict.search.market.lowerBound}</p>
-                  <h3>{toMoney(lowerBound)}</h3>
-                  <p>{dict.search.market.median}: {toMoney(medianPrice)}</p>
-                </div>
-              )}
-              <div className="spotlightFactCard">
-                <p className="label">{dict.search.kpiStatus}</p>
-                <h3>{latestLot.status || "-"}</h3>
-                <p>{dict.auto.images}: {latestLotImages.length}</p>
-              </div>
-              {latestLot.primary_damage && (
-                <div className="spotlightFactCard">
-                  <p className="label">Damage</p>
-                  <h3>{latestLot.primary_damage}</h3>
-                  <p>{latestLot.secondary_damage || "-"}</p>
-                </div>
-              )}
-              {latestLot.odometer && (
-                <div className="spotlightFactCard">
-                  <p className="label">Odometer</p>
-                  <h3>{latestLot.odometer.toLocaleString("en-US")} mi</h3>
-                  <p>Run & drive: {toYesNo(latestLot.run_and_drive)}</p>
-                </div>
-              )}
+            <div>
+              <p className="label">Odometer</p>
+              <strong>{latestLot.odometer ? `${latestLot.odometer.toLocaleString("en-US")} mi` : "-"}</strong>
+            </div>
+            <div>
+              <p className="label">Run & drive</p>
+              <strong>{toYesNo(latestLot.run_and_drive)}</strong>
             </div>
           </div>
         </section>
       )}
 
-      <section className="panel autoSeoSection">
-        <h2>{dict.auto.knowTitle}</h2>
-        <p>{latestLot ? `${latestLot.source} #${latestLot.lot_number}` : "-"}</p>
-        <p>
-          Status: {latestLot?.status || "-"}. Sale date: {latestLot?.sale_date || "-"}. Location: {latestLot?.location || "-"}.
-        </p>
-      </section>
-
       {auctionSpecRows.length > 0 && (
-        <section className="panel auctionSpecsPanel">
-          <div className="sectionHead">
-            <div>
-              <h2>{dict.search.auctionSpecs.title}</h2>
-              <p className="muted">{dict.search.auctionSpecs.lead}</p>
-            </div>
-          </div>
+        <section className="panel auctionSpecsPanel compactSpecsPanel">
+          <h2>{dict.search.auctionSpecs.title}</h2>
           <dl className="auctionSpecsGrid">
             {auctionSpecRows.map(([label, value]) => (
               <div key={`${label}-${value}`}>
@@ -565,40 +536,6 @@ export default async function AutoSeoPage({ params }: PageProps) {
               </div>
             ))}
           </dl>
-        </section>
-      )}
-
-      {riskAssessment && riskText && (
-        <section className="panel riskPanel">
-          <div className="sectionHead">
-            <div>
-              <h2>{dict.auto.riskTitle}</h2>
-              <p className="muted">{dict.auto.riskLead}</p>
-            </div>
-            <div className={`riskBadge risk-${riskAssessment.level}`}>{riskText.title}</div>
-          </div>
-          <div className="riskGrid">
-            <article className="riskCard">
-              <p className="label">{dict.search.risk.score}</p>
-              <h3>{riskAssessment.score}/100</h3>
-            </article>
-            <article className="riskCard">
-              <p className="label">{dict.search.risk.level}</p>
-              <h3>{riskText.title}</h3>
-            </article>
-          </div>
-          {riskText.reasons.length > 0 && (
-            <>
-              <p className="label riskReasonsLabel">{dict.search.risk.reasons}</p>
-              <div className="riskReasons">
-                {riskText.reasons.map((reason) => (
-                  <article key={reason} className="riskReasonCard">
-                    <p>{reason}</p>
-                  </article>
-                ))}
-              </div>
-            </>
-          )}
         </section>
       )}
 
@@ -662,21 +599,24 @@ export default async function AutoSeoPage({ params }: PageProps) {
               </article>
             ))}
           </div>
-          <div className="decoderGrid">
-            {decoded.sections.map((section) => (
-              <article key={section.title} className="decoderCard">
-                <h3>{section.title}</h3>
-                <dl className="decoderList">
-                  {section.items.map((item) => (
-                    <div key={item.key}>
-                      <dt>{item.label}</dt>
-                      <dd>{item.value}</dd>
-                    </div>
-                  ))}
-                </dl>
-              </article>
-            ))}
-          </div>
+          <details className="decoderDetails">
+            <summary>Show full NHTSA equipment</summary>
+            <div className="decoderGrid">
+              {decoded.sections.map((section) => (
+                <article key={section.title} className="decoderCard">
+                  <h3>{section.title}</h3>
+                  <dl className="decoderList">
+                    {section.items.map((item) => (
+                      <div key={item.key}>
+                        <dt>{item.label}</dt>
+                        <dd>{item.value}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                </article>
+              ))}
+            </div>
+          </details>
         </section>
       )}
 
@@ -746,18 +686,7 @@ export default async function AutoSeoPage({ params }: PageProps) {
         )}
       </section>
 
-      <section className="panel autoSeoSection" id="vin-profit">
-        <h2>{dict.auto.practicalTitle}</h2>
-        <p>
-          Do not evaluate the vehicle only by auction price. The real decision starts after logistics, customs, repair,
-          certification, and local costs are added to the scenario.
-        </p>
-        <div className="actions">
-          <Link href={`/search?vin=${vin}#toolkit`} className="button">
-            {dict.auto.openCalculator}
-          </Link>
-        </div>
-      </section>
     </main>
   );
 }
+

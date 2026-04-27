@@ -1345,6 +1345,97 @@ select:focus {
   object-fit: cover;
 }
 
+.autoBidfaxSection {
+  padding-top: 18px;
+}
+
+.autoBidfaxGrid {
+  margin-top: 14px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(270px, 360px);
+  gap: 16px;
+  align-items: start;
+}
+
+.autoBidfaxGrid .autoTopGallery {
+  margin-top: 0;
+}
+
+.autoBidfaxSummary {
+  position: sticky;
+  top: 88px;
+  display: grid;
+  gap: 12px;
+}
+
+.autoBidfaxFacts {
+  margin: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.autoBidfaxFacts div {
+  display: grid;
+  gap: 4px;
+  padding: 11px 12px;
+  border: 1px solid rgba(27, 79, 153, 0.12);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.88);
+}
+
+.autoBidfaxFacts dt,
+.autoBidfaxFacts dd {
+  margin: 0;
+}
+
+.autoBidfaxFacts dt {
+  color: var(--muted);
+  font-family: var(--font-mono), Consolas, monospace;
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.autoBidfaxFacts dd {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.autoCompactNotice {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  border-color: rgba(217, 164, 65, 0.28);
+  background: rgba(255, 250, 238, 0.9);
+}
+
+.autoCompactNotice strong,
+.autoCompactNotice span {
+  padding: 7px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.78);
+  color: var(--text);
+}
+
+.autoCompactOverview .autoSeoQuickFacts {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.compactSpecsPanel h2 {
+  margin-bottom: 12px;
+}
+
+.decoderDetails {
+  margin-top: 14px;
+}
+
+.decoderDetails summary {
+  cursor: pointer;
+  color: var(--accent);
+  font-weight: 700;
+}
+
 .photoLightbox {
   position: fixed;
   inset: 0;
@@ -1698,9 +1789,14 @@ select:focus {
   .heroFrame,
   .showcaseGrid,
   .resultGrid,
+  .autoBidfaxGrid,
   .autoTopGallery,
   .lotSpotlightGrid {
     grid-template-columns: 1fr;
+  }
+
+  .autoBidfaxSummary {
+    position: static;
   }
 
   .heroSignal {
@@ -1750,6 +1846,7 @@ select:focus {
   .stats,
   .toolGrid,
   .autoSeoQuickFacts,
+  .autoCompactOverview .autoSeoQuickFacts,
   .carsClusterKpi,
   .lotSpotlightFacts,
   .kpiStrip,
@@ -2112,6 +2209,10 @@ select:focus {
     gap: 6px;
   }
 
+  .autoCompactNotice {
+    display: grid;
+  }
+
   .autoTopMainPhoto img {
     max-height: 320px;
   }
@@ -2177,6 +2278,7 @@ html[data-theme="dark"] .watchlistFacts div,
 html[data-theme="dark"] .decoderSummaryCard,
 html[data-theme="dark"] .decoderCard,
 html[data-theme="dark"] .autoSeoQuickFacts > div,
+html[data-theme="dark"] .autoBidfaxFacts div,
 html[data-theme="dark"] .carsClusterKpi article,
 html[data-theme="dark"] .spotlightFactCard,
 html[data-theme="dark"] .adminSeoItem {
@@ -2216,6 +2318,17 @@ html[data-theme="dark"] .purchasePriceHero,
 html[data-theme="dark"] .recentPrice {
   background: linear-gradient(180deg, rgba(21, 68, 47, 0.42), rgba(18, 51, 39, 0.36));
   border-color: rgba(54, 179, 111, 0.22);
+}
+
+html[data-theme="dark"] .autoCompactNotice {
+  background: rgba(31, 42, 58, 0.86);
+  border-color: rgba(174, 196, 224, 0.16);
+}
+
+html[data-theme="dark"] .autoCompactNotice strong,
+html[data-theme="dark"] .autoCompactNotice span {
+  background: rgba(12, 18, 28, 0.68);
+  color: #dbe8ff;
 }
 
 html[data-theme="dark"] .purchasePriceHero strong,
