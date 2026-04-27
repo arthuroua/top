@@ -84,22 +84,92 @@ export type ModelMenuItem = {
 };
 
 export const SEO_MODEL_MENU: ModelMenuItem[] = [
-  { make: "BMW", models: ["X1", "X3", "X5", "X7", "3 Series", "5 Series", "i4", "i7"] },
-  { make: "Audi", models: ["A4", "A6", "Q3", "Q5", "Q7", "e-tron"] },
-  { make: "Mercedes-Benz", models: ["C-Class", "E-Class", "GLA", "GLC", "GLE", "S-Class"] },
-  { make: "Tesla", models: ["Model 3", "Model Y", "Model S", "Model X"] },
-  { make: "Toyota", models: ["Camry", "Corolla", "RAV4", "Highlander", "Prius"] },
-  { make: "Honda", models: ["Accord", "Civic", "CR-V", "Pilot", "Odyssey"] },
-  { make: "Nissan", models: ["Rogue", "Altima", "Sentra", "Leaf", "Murano"] },
+  { make: "BMW", models: ["X1", "X3", "X5", "X7", "3 Series", "5 Series", "7 Series", "i3", "i4", "i7", "iX"] },
+  { make: "Audi", models: ["A3", "A4", "A5", "A6", "Q3", "Q5", "Q7", "Q8", "e-tron", "Q4 e-tron"] },
+  { make: "Mercedes-Benz", models: ["A-Class", "C-Class", "E-Class", "GLA", "GLB", "GLC", "GLE", "GLS", "S-Class", "EQE", "EQS"] },
+  { make: "Tesla", models: ["Model 3", "Model Y", "Model S", "Model X", "Cybertruck"] },
+  { make: "Toyota", models: ["Camry", "Corolla", "RAV4", "Highlander", "Prius", "Tacoma", "Tundra", "Sienna", "Venza"] },
+  { make: "Honda", models: ["Accord", "Civic", "CR-V", "HR-V", "Pilot", "Odyssey", "Ridgeline"] },
+  { make: "Nissan", models: ["Rogue", "Rogue Sport", "Altima", "Sentra", "Leaf", "Murano", "Pathfinder", "Frontier", "Ariya"] },
   { make: "Volkswagen", models: ["Passat", "Jetta", "Tiguan", "Atlas", "Golf"] },
-  { make: "Hyundai", models: ["Elantra", "Sonata", "Tucson", "Santa Fe", "Kona"] },
-  { make: "Kia", models: ["Niro", "Sportage", "Sorento", "Optima", "Telluride"] },
-  { make: "Jeep", models: ["Cherokee", "Grand Cherokee", "Compass", "Wrangler", "Renegade"] },
-  { make: "Ford", models: ["Escape", "Fusion", "Explorer", "F-150", "Mustang"] },
-  { make: "Chevrolet", models: ["Bolt EV", "Malibu", "Equinox", "Tahoe", "Silverado"] },
-  { make: "Lexus", models: ["RX", "NX", "ES", "IS", "GX"] },
-  { make: "Mazda", models: ["Mazda3", "Mazda6", "CX-5", "CX-9", "CX-30"] },
-  { make: "Subaru", models: ["Forester", "Outback", "Impreza", "Legacy", "Crosstrek"] }
+  { make: "Hyundai", models: ["Elantra", "Sonata", "Tucson", "Santa Fe", "Kona", "Palisade", "Ioniq 5", "Ioniq 6"] },
+  { make: "Kia", models: ["Niro", "Sportage", "Sorento", "Optima", "K5", "Telluride", "EV6", "EV9"] },
+  { make: "Jeep", models: ["Cherokee", "Grand Cherokee", "Compass", "Wrangler", "Renegade", "Gladiator", "Wagoneer"] },
+  { make: "Ford", models: ["Edge", "Escape", "Fusion", "Explorer", "Expedition", "F-150", "Maverick", "Mustang", "Mustang Mach-E"] },
+  { make: "Chevrolet", models: ["Bolt EV", "Bolt EUV", "Malibu", "Equinox", "Traverse", "Tahoe", "Suburban", "Silverado", "Colorado"] },
+  { make: "Lexus", models: ["RX", "NX", "UX", "ES", "IS", "GX", "LX"] },
+  { make: "Mazda", models: ["Mazda3", "Mazda6", "CX-3", "CX-30", "CX-5", "CX-50", "CX-9", "CX-90"] },
+  { make: "Subaru", models: ["Forester", "Outback", "Impreza", "Legacy", "Crosstrek", "Ascent", "WRX"] },
+  { make: "Porsche", models: ["Cayenne", "Macan", "Panamera", "Taycan", "911"] },
+  { make: "Volvo", models: ["S60", "S90", "XC40", "XC60", "XC90", "C40"] },
+  { make: "Rivian", models: ["R1T", "R1S"] },
+  { make: "Polestar", models: ["2", "3", "4"] },
+  { make: "GMC", models: ["Terrain", "Acadia", "Yukon", "Sierra", "Canyon", "Hummer EV"] },
+  { make: "RAM", models: ["1500", "2500", "3500", "ProMaster"] },
+  { make: "Cadillac", models: ["XT4", "XT5", "XT6", "Escalade", "Lyriq"] },
+  { make: "Lincoln", models: ["Corsair", "Nautilus", "Aviator", "Navigator"] },
+  { make: "Acura", models: ["ILX", "TLX", "RDX", "MDX"] },
+  { make: "Infiniti", models: ["Q50", "QX50", "QX60", "QX80"] },
+  { make: "MINI", models: ["Cooper", "Countryman", "Clubman"] }
+];
+
+export type CatalogMenuSection = {
+  title: string;
+  links: Array<{ label: string; href: string }>;
+};
+
+export const CATALOG_MENU_SECTIONS: CatalogMenuSection[] = [
+  {
+    title: "Top brands",
+    links: ["Acura", "Audi", "BMW", "Chevrolet", "Ford", "Honda", "Hyundai", "Kia", "Lexus", "Mercedes-Benz", "Nissan", "Toyota", "Volkswagen"].map((make) => ({
+      label: make,
+      href: brandHref(make),
+    })),
+  },
+  {
+    title: "Electric",
+    links: [
+      ["Tesla", "Model 3"],
+      ["Tesla", "Model Y"],
+      ["Chevrolet", "Bolt EV"],
+      ["Ford", "Mustang Mach-E"],
+      ["Hyundai", "Ioniq 5"],
+      ["Kia", "EV6"],
+      ["Nissan", "Leaf"],
+      ["Porsche", "Taycan"],
+      ["Rivian", "R1T"],
+      ["Polestar", "2"],
+    ].map(([make, model]) => ({ label: `${make} ${model}`, href: modelHref(make, model) })),
+  },
+  {
+    title: "SUVs",
+    links: [
+      ["Ford", "Edge"],
+      ["Ford", "Explorer"],
+      ["Nissan", "Rogue"],
+      ["Toyota", "RAV4"],
+      ["Honda", "CR-V"],
+      ["Mazda", "CX-5"],
+      ["BMW", "X5"],
+      ["Audi", "Q5"],
+      ["Mercedes-Benz", "GLE"],
+      ["Jeep", "Grand Cherokee"],
+    ].map(([make, model]) => ({ label: `${make} ${model}`, href: modelHref(make, model) })),
+  },
+  {
+    title: "Pickups",
+    links: [
+      ["Ford", "F-150"],
+      ["Ford", "Maverick"],
+      ["Chevrolet", "Silverado"],
+      ["Chevrolet", "Colorado"],
+      ["Toyota", "Tacoma"],
+      ["Toyota", "Tundra"],
+      ["RAM", "1500"],
+      ["GMC", "Sierra"],
+      ["Rivian", "R1T"],
+    ].map(([make, model]) => ({ label: `${make} ${model}`, href: modelHref(make, model) })),
+  },
 ];
 
 export function modelHref(make: string, model: string): string {

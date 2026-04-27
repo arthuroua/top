@@ -25,6 +25,8 @@ export const dictionaries = {
     nav: {
       search: "Search",
       catalog: "All cars",
+      allCatalog: "Open catalog",
+      allBrands: "All brands",
       localMarket: "Auto.RIA market",
       watchlist: "Watchlist",
       reports: "Reports",
@@ -314,6 +316,8 @@ export const dictionaries = {
     nav: {
       search: "Пошук",
       catalog: "Всі авто",
+      allCatalog: "Відкрити каталог",
+      allBrands: "Всі бренди",
       localMarket: "Ринок Auto.RIA",
       watchlist: "Watchlist",
       reports: "Звіти",
@@ -603,6 +607,8 @@ export const dictionaries = {
     nav: {
       search: "Поиск",
       catalog: "Все авто",
+      allCatalog: "Открыть каталог",
+      allBrands: "Все бренды",
       localMarket: "Рынок Auto.RIA",
       watchlist: "Watchlist",
       reports: "Отчёты",

@@ -80,7 +80,8 @@ body {
   flex-wrap: wrap;
 }
 
-.siteNav a {
+.siteNav a,
+.catalogMenu summary {
   text-decoration: none;
   color: var(--accent);
   font-family: var(--font-mono), Consolas, monospace;
@@ -95,6 +96,89 @@ body {
   color: #fff;
   background: linear-gradient(180deg, var(--accent), var(--accent-strong));
   box-shadow: 0 14px 28px rgba(27, 79, 153, 0.18);
+}
+
+.catalogMenu {
+  position: relative;
+}
+
+.catalogMenu summary {
+  display: block;
+  cursor: pointer;
+  list-style: none;
+}
+
+.catalogMenu summary::-webkit-details-marker {
+  display: none;
+}
+
+.catalogMenuPanel {
+  position: absolute;
+  top: calc(100% + 12px);
+  left: 50%;
+  z-index: 60;
+  width: min(980px, 92vw);
+  max-height: min(72vh, 720px);
+  overflow: auto;
+  transform: translateX(-42%);
+  padding: 18px;
+  border: 1px solid rgba(27, 79, 153, 0.14);
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 28px 80px rgba(16, 31, 51, 0.2);
+}
+
+.catalogMenuHead {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.catalogMenuHead strong {
+  font-family: var(--font-mono), Consolas, monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.catalogMenuHead a {
+  padding: 8px 10px;
+}
+
+.catalogMenuGrid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.catalogMenuSection {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  min-width: 0;
+}
+
+.catalogMenuSection p {
+  margin: 0 0 4px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.catalogMenuSection a {
+  padding: 7px 9px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  overflow-wrap: anywhere;
+}
+
+.catalogMenuBrands {
+  max-height: 420px;
+  overflow: auto;
+  padding-right: 4px;
 }
 
 .localeSwitch {
@@ -1957,6 +2041,28 @@ select:focus {
     gap: 8px;
   }
 
+  .catalogMenu {
+    width: 100%;
+  }
+
+  .catalogMenu summary {
+    width: 100%;
+  }
+
+  .catalogMenuPanel {
+    position: static;
+    width: 100%;
+    max-height: 60vh;
+    transform: none;
+    margin-top: 8px;
+    padding: 12px;
+    border-radius: 18px;
+  }
+
+  .catalogMenuGrid {
+    grid-template-columns: 1fr;
+  }
+
   .localeSwitch {
     width: 100%;
     justify-content: space-between;
@@ -2312,7 +2418,14 @@ html[data-theme="dark"] .siteFooter {
     linear-gradient(180deg, rgba(12, 18, 28, 0.72), rgba(10, 16, 25, 0.94));
 }
 
+html[data-theme="dark"] .catalogMenuPanel {
+  border-color: rgba(174, 196, 224, 0.18);
+  background: rgba(13, 21, 33, 0.98);
+  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.38);
+}
+
 html[data-theme="dark"] .siteNav a,
+html[data-theme="dark"] .catalogMenu summary,
 html[data-theme="dark"] .localeSwitch,
 html[data-theme="dark"] .localePill,
 html[data-theme="dark"] .themeToggle,

@@ -3,6 +3,7 @@
 import Link from "next/link";
 
 import { LANGUAGE_LABELS, SUPPORTED_LOCALES, type Locale } from "../lib/i18n";
+import { CATALOG_MENU_SECTIONS, SEO_BRANDS, brandHref } from "../lib/seoCatalog";
 import { useI18n } from "./i18n-provider";
 import { ThemeToggle } from "./theme-toggle";
 
@@ -18,7 +19,35 @@ export function SiteHeader() {
         </Link>
         <nav className="siteNav">
           <Link href="/search">{dict.nav.search}</Link>
-          <Link href="/cars">{dict.nav.catalog}</Link>
+          <details className="catalogMenu">
+            <summary>{dict.nav.catalog}</summary>
+            <div className="catalogMenuPanel">
+              <div className="catalogMenuHead">
+                <strong>{dict.nav.catalog}</strong>
+                <Link href="/cars">{dict.nav.allCatalog}</Link>
+              </div>
+              <div className="catalogMenuGrid">
+                {CATALOG_MENU_SECTIONS.map((section) => (
+                  <div key={section.title} className="catalogMenuSection">
+                    <p>{section.title}</p>
+                    {section.links.map((item) => (
+                      <Link key={item.href} href={item.href}>
+                        {item.label}
+                      </Link>
+                    ))}
+                  </div>
+                ))}
+                <div className="catalogMenuSection catalogMenuBrands">
+                  <p>{dict.nav.allBrands}</p>
+                  {SEO_BRANDS.map((item) => (
+                    <Link key={item.make} href={brandHref(item.make)}>
+                      {item.make}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </details>
           <Link href="/local-market">{dict.nav.localMarket}</Link>
           <Link href="/market-watch">Market Watch</Link>
           <Link href="/watchlist">{dict.nav.watchlist}</Link>
