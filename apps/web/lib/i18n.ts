@@ -31,6 +31,14 @@ export const dictionaries = {
       calculator: "Calculator",
       about: "About / Contacts"
     },
+    footer: {
+      tagline: "VIN history, auction photos, specs, and importer decision tools in one clean workspace.",
+      disclaimer:
+        "Data is aggregated from open, public, and otherwise lawfully accessible sources, official datasets, user-provided files, and partner/API feeds where available.",
+      notice:
+        "The service is informational only and may contain delays, missing photos, or data errors. Always verify the vehicle, title, fees, and auction terms before bidding or buying.",
+      rights: "All rights reserved."
+    },
     home: {
       chip: "Auction Intelligence",
       title: "A modern auction service for importers with VIN history, photos, specs, and margin tools",
@@ -312,6 +320,14 @@ export const dictionaries = {
       calculator: "Калькулятор",
       about: "Про сервіс / Контакти"
     },
+    footer: {
+      tagline: "VIN-історія, фото аукціонів, комплектація та інструменти для рішення по ставці в одному місці.",
+      disclaimer:
+        "Дані агрегуються з відкритих, публічних та інших законно доступних джерел, офіційних наборів даних, файлів користувача та партнерських/API-каналів, якщо вони доступні.",
+      notice:
+        "Сервіс має інформаційний характер: дані можуть оновлюватися із затримкою, містити неповні фото або помилки. Перед ставкою чи покупкою завжди перевіряйте авто, title, комісії та умови аукціону.",
+      rights: "Всі права захищені."
+    },
     home: {
       chip: "Auction Intelligence",
       title: "Сучасний сервіс для пригону з VIN-історією, фото, комплектацією та калькулятором маржі",
@@ -592,6 +608,14 @@ export const dictionaries = {
       reports: "Отчёты",
       calculator: "Калькулятор",
       about: "О сервисе / Контакты"
+    },
+    footer: {
+      tagline: "VIN-история, фото аукционов, комплектация и инструменты для решения по ставке в одном месте.",
+      disclaimer:
+        "Данные агрегируются из открытых, публичных и иных законно доступных источников, официальных наборов данных, файлов пользователя и партнёрских/API-каналов, если они доступны.",
+      notice:
+        "Сервис носит информационный характер: данные могут обновляться с задержкой, содержать неполные фото или ошибки. Перед ставкой или покупкой всегда проверяйте авто, title, комиссии и условия аукциона.",
+      rights: "Все права защищены."
     },
     home: {
       chip: "Auction Intelligence",

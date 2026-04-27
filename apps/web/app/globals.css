@@ -124,6 +124,56 @@ body {
   box-shadow: 0 10px 20px rgba(27, 79, 153, 0.18);
 }
 
+.siteFooter {
+  margin-top: 56px;
+  border-top: 1px solid rgba(27, 79, 153, 0.12);
+  background:
+    radial-gradient(520px 220px at 12% 0%, rgba(27, 79, 153, 0.08), transparent 62%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(236, 243, 251, 0.92));
+}
+
+.siteFooterInner {
+  width: min(1180px, 92vw);
+  margin: 0 auto;
+  padding: 28px 0 34px;
+  display: grid;
+  grid-template-columns: minmax(220px, 0.8fr) minmax(180px, 0.55fr) minmax(300px, 1.2fr);
+  gap: 24px;
+  align-items: start;
+}
+
+.footerBrand strong {
+  display: block;
+  color: var(--text);
+  font-family: var(--font-mono), Consolas, monospace;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.footerBrand p,
+.footerLegal p,
+.footerLegal small {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+  line-height: 1.55;
+}
+
+.footerLinks {
+  display: grid;
+  gap: 8px;
+}
+
+.footerLinks a {
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.footerLinks a:hover {
+  color: var(--accent-strong);
+}
+
 .themeToggle {
   min-height: 42px;
   padding: 0 14px;
@@ -1912,6 +1962,12 @@ select:focus {
     justify-content: space-between;
   }
 
+  .siteFooterInner {
+    width: min(960px, 94vw);
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
   .shell {
     width: min(960px, 94vw);
     margin-top: 22px;
@@ -2247,6 +2303,13 @@ html[data-theme="dark"] body {
 html[data-theme="dark"] .siteHeader {
   background: rgba(12, 18, 28, 0.76);
   border-bottom-color: rgba(174, 196, 224, 0.12);
+}
+
+html[data-theme="dark"] .siteFooter {
+  border-top-color: rgba(174, 196, 224, 0.12);
+  background:
+    radial-gradient(520px 220px at 12% 0%, rgba(143, 185, 255, 0.12), transparent 62%),
+    linear-gradient(180deg, rgba(12, 18, 28, 0.72), rgba(10, 16, 25, 0.94));
 }
 
 html[data-theme="dark"] .siteNav a,

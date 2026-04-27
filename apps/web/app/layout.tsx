@@ -5,6 +5,7 @@ import { cookies } from "next/headers";
 import { JetBrains_Mono, Space_Grotesk } from "next/font/google";
 
 import { I18nProvider } from "../components/i18n-provider";
+import { SiteFooter } from "../components/site-footer";
 import { SiteHeader } from "../components/site-header";
 import { DEFAULT_LOCALE, LOCALE_COOKIE, getDictionary, normalizeLocale } from "../lib/i18n";
 
@@ -64,6 +65,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         <I18nProvider initialLocale={locale}>
           <SiteHeader />
           {children}
+          <SiteFooter />
         </I18nProvider>
       </body>
     </html>
