@@ -9,6 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from app.models import Lot, LotImage, MediaAsset
+from app.services.copart_gallery import fetch_copart_gallery_images
 from app.services.media_archive import archive_image, public_media_url
 
 
@@ -99,9 +100,40 @@ def enrich_lot_images(db: Session, *, source: str, lot_number: str, vin: str | N
 
     added = 0
     next_order = max((image.shot_order or 0 for image in source_images), default=0) + 1
+    if lot.source.lower() == "copart":
+        gallery_urls = fetch_copart_gallery_images(lot.lot_number)
+        for candidate_url in gallery_urls:
+            if added >= max_add:
+                break
+            if candidate_url in existing_urls:
+                continue
+            if sleep_ms > 0:
+                time.sleep(sleep_ms / 1000)
+            asset = archive_image(
+                db,
+                provider=lot.source.lower(),
+                owner_type="lot",
+                owner_id=f"{lot.source.lower()}:{lot.lot_number}",
+                source_url=candidate_url,
+            )
+            stored_url = public_media_url(asset) if asset is not None and asset.is_archived else candidate_url
+            checksum = asset.checksum if asset is not None and asset.is_archived else None
+            checksum_key = f"checksum:{checksum}" if checksum else ""
+            if stored_url in existing_urls or (checksum_key and checksum_key in existing_urls):
+                continue
+            db.add(LotImage(lot_id=lot.id, image_url=stored_url, shot_order=next_order, checksum=checksum))
+            existing_urls.add(candidate_url)
+            existing_urls.add(stored_url)
+            if checksum_key:
+                existing_urls.add(checksum_key)
+            next_order += 1
+            added += 1
+
     for image in source_images:
         source_url = _source_url_for_image(db, image.image_url)
         existing_urls.add(source_url)
+        if image.checksum:
+            existing_urls.add(f"checksum:{image.checksum}")
         for candidate_url in _candidate_image_urls(source_url):
             if added >= max_add:
                 break
@@ -121,9 +153,14 @@ def enrich_lot_images(db: Session, *, source: str, lot_number: str, vin: str | N
             )
             stored_url = public_media_url(asset) if asset is not None and asset.is_archived else candidate_url
             checksum = asset.checksum if asset is not None and asset.is_archived else None
+            checksum_key = f"checksum:{checksum}" if checksum else ""
+            if stored_url in existing_urls or (checksum_key and checksum_key in existing_urls):
+                continue
             db.add(LotImage(lot_id=lot.id, image_url=stored_url, shot_order=next_order, checksum=checksum))
             existing_urls.add(candidate_url)
             existing_urls.add(stored_url)
+            if checksum_key:
+                existing_urls.add(checksum_key)
             next_order += 1
             added += 1
         if added >= max_add:

@@ -14,6 +14,7 @@ from urllib.request import Request, urlopen
 import redis
 
 from app.schemas import IngestionJobPayload, IngestionPriceEvent
+from app.services.copart_gallery import fetch_copart_gallery_images
 from app.services.ingestion_queue import enqueue_ingestion_job
 
 
@@ -202,7 +203,11 @@ def _to_job(row: dict[str, str]) -> IngestionJobPayload | None:
 
     image_primary = _normalize_image_url(row.get("Image URL"))
     image_thumb = _normalize_image_url(row.get("Image Thumbnail"))
-    images = [item for item in [image_primary, image_thumb] if item and _is_direct_image_url(item)]
+    images = fetch_copart_gallery_images(lot_number, image_primary)
+    if not images:
+        images = [item for item in [image_primary, image_thumb] if item and _is_direct_image_url(item)]
+    elif image_thumb and _is_direct_image_url(image_thumb) and image_thumb not in images:
+        images.append(image_thumb)
 
     hammer_price = _parse_money_to_int(row.get("High Bid =non-vix,Sealed=Vix"))
     event_time = _parse_event_time(row.get("Last Updated Time"))
