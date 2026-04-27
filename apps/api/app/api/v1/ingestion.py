@@ -587,11 +587,12 @@ def run_copart_csv_once(
     process_immediately: bool = Query(default=True),
     max_process: int = Query(default=10, ge=0, le=100),
     max_rows: int = Query(default=50, ge=1, le=500),
+    force: bool = Query(default=False),
     db: Session = Depends(get_db),
 ) -> dict:
     try:
         config = load_copart_csv_config()
-        stats = run_copart_csv_ingestion(replace(config, max_rows_per_run=max_rows))
+        stats = run_copart_csv_ingestion(replace(config, max_rows_per_run=max_rows), force=force)
     except RedisError as exc:
         raise HTTPException(status_code=503, detail=f"Queue unavailable: {exc}") from exc
     except RuntimeError as exc:
@@ -631,6 +632,7 @@ def run_copart_csv_once(
         "deduped_rows": stats.deduped_rows,
         "skipped_rows": stats.skipped_rows,
         "processed_rows": processed,
+        "force": force,
         "queue_depth": depth,
         "processing_errors": processing_errors,
         "started_at": stats.started_at.isoformat(),

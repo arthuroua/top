@@ -38,7 +38,7 @@ type PageProps = {
 const apiInternalBase =
   process.env.API_INTERNAL_BASE_URL || process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
-const marketApiEnabled = process.env.MARKET_API_ENABLED === "true";
+const marketApiEnabled = process.env.MARKET_API_ENABLED !== "false";
 
 function toMoney(value: number | null | undefined): string {
   if (value === null || value === undefined) return "-";
@@ -74,6 +74,11 @@ const fetchComps = cache(async (make: string, model: string) => {
   return safeJsonFetch<MarketCompsResponse>(`${apiInternalBase}/api/v1/market/comps?${params.toString()}`, 1800);
 });
 
+const fetchMakeComps = cache(async (make: string) => {
+  const params = new URLSearchParams({ make, limit: "12" });
+  return safeJsonFetch<MarketCompsResponse>(`${apiInternalBase}/api/v1/market/comps?${params.toString()}`, 1800);
+});
+
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { make: makeSlug, model: modelSlug } = await params;
   const make = readableMakeFromSlug(makeSlug);
@@ -102,6 +107,7 @@ export default async function ModelPage({ params }: PageProps) {
     (item) => item.model?.toLowerCase() === model.toLowerCase()
   );
   const market = await fetchComps(make, model);
+  const similarMarket = market?.items.length ? null : await fetchMakeComps(make);
 
   if (!model) notFound();
 
@@ -178,9 +184,39 @@ export default async function ModelPage({ params }: PageProps) {
       </section>
 
       <section className="panel carsClusterSection">
-        <h2>{dict.cars.marketSales}</h2>
+        <h2>{market?.items.length ? dict.cars.marketSales : `${dict.cars.marketSales}: ${make}`}</h2>
         {!market || market.items.length === 0 ? (
-          <p>{dict.cars.noMarketSales}</p>
+          similarMarket?.items.length ? (
+            <>
+              <p>
+                По {make} {model} ще немає точних продажів у базі. Нижче показані свіжі продажі {make}, щоб сторінка
+                не була порожньою, поки імпорт добирає конкретну модель.
+              </p>
+              <div className="carsClusterGrid">
+                {similarMarket.items.map((item) => (
+                  <article key={`${item.source}-${item.lot_number}-${item.vin}`} className="carsClusterCard">
+                    <p className="label">
+                      {item.source} #{item.lot_number}
+                    </p>
+                    <h3>{toMoney(item.hammer_price_usd)}</h3>
+                    <p>
+                      {item.year || "-"} {item.make || make} {item.model || ""}
+                    </p>
+                    <p>VIN: {item.vin}</p>
+                    <p>Date: {toDate(item.sale_date)}</p>
+                    <p>Location: {item.location || "-"}</p>
+                    <div className="actions compactActions">
+                      <Link href={`/auto/${item.vin}`} className="button">
+                        {dict.cars.openVin}
+                      </Link>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </>
+          ) : (
+            <p>{dict.cars.noMarketSales}</p>
+          )
         ) : (
           <div className="carsClusterGrid">
             {market.items.map((item) => (

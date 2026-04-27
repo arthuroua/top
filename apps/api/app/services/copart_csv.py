@@ -225,10 +225,15 @@ def _to_job(row: dict[str, str]) -> IngestionJobPayload | None:
     status = str(row.get("Sale Status") or "").strip() or None
 
     source_url = str(row.get("Link") or row.get("URL") or "").strip() or None
+    model_group = str(row.get("Model Group") or "").strip()
+    model_detail = str(row.get("Model Detail") or "").strip()
+    model = model_detail or model_group or str(row.get("Model") or "").strip() or None
 
     attributes = {
         "auction_phase": str(row.get("Auction Date Type") or "").strip() or None,
         "sale_status_label": status,
+        "model_group": model_group or None,
+        "model_detail": model_detail or None,
         "currency": "USD",
     }
     attributes = {key: value for key, value in attributes.items() if value is not None}
@@ -248,7 +253,7 @@ def _to_job(row: dict[str, str]) -> IngestionJobPayload | None:
         primary_damage=(str(row.get("Damage Description") or "").strip() or None),
         odometer=_parse_money_to_int(row.get("Odometer")),
         make=(str(row.get("Make") or "").strip() or None),
-        model=(str(row.get("Model") or "").strip() or None),
+        model=model,
         year=_parse_int(row.get("Year")),
         trim=(str(row.get("Trim") or "").strip() or None),
         body_style=(str(row.get("Body Style") or "").strip() or None),
@@ -279,7 +284,7 @@ def _mark_if_new(redis_client: redis.Redis, key: str, ttl_seconds: int) -> bool:
     return bool(result)
 
 
-def run_copart_csv_ingestion(config: CopartCsvConfig | None = None) -> CopartCsvIngestionStats:
+def run_copart_csv_ingestion(config: CopartCsvConfig | None = None, *, force: bool = False) -> CopartCsvIngestionStats:
     cfg = config or load_copart_csv_config()
     if not cfg.enabled:
         raise RuntimeError("COPART_CSV_ENABLED is false")
@@ -326,7 +331,7 @@ def run_copart_csv_ingestion(config: CopartCsvConfig | None = None) -> CopartCsv
 
                     row_hash = _row_fingerprint(row)
                     dedupe_key = f"{cfg.dedupe_prefix}:{row_hash}"
-                    if not _mark_if_new(redis_client, dedupe_key, ttl_seconds):
+                    if not force and not _mark_if_new(redis_client, dedupe_key, ttl_seconds):
                         deduped_rows += 1
                         continue
 
