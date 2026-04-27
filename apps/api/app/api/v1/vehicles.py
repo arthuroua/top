@@ -40,8 +40,18 @@ def _is_direct_image_url(url: str) -> bool:
     return lowered.endswith((".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp", ".avif"))
 
 
+def _sorted_lot_images(lot: Lot) -> list[LotImage]:
+    return sorted(lot.images, key=lambda item: ((item.shot_order is None), (item.shot_order or 0), item.created_at))
+
+
+def _preferred_lot_images(lot: Lot) -> list[LotImage]:
+    images = [image for image in _sorted_lot_images(lot) if _is_direct_image_url(image.image_url)]
+    archived_images = [image for image in images if image.image_url.startswith("/api/v1/media/archive/")]
+    return archived_images or images
+
+
 def _to_lot_item(lot: Lot) -> LotItem:
-    images = sorted(lot.images, key=lambda item: ((item.shot_order is None), (item.shot_order or 0), item.created_at))
+    images = _sorted_lot_images(lot)
     events = sorted(lot.price_events, key=lambda item: item.event_time, reverse=True)
     latest_snapshot = max(lot.import_snapshots, key=lambda item: item.imported_at, default=None)
     payload = latest_snapshot.payload_json if latest_snapshot else {}
@@ -67,9 +77,9 @@ def _to_lot_item(lot: Lot) -> LotItem:
     if hide_data_source():
         safe_images: list[LotImageItem] = []
         seen_images: set[str] = set()
-        for index, image in enumerate(images):
-            if not _is_direct_image_url(image.image_url):
-                continue
+        preferred_images = _preferred_lot_images(lot)
+        image_indexes = {image.id: index for index, image in enumerate(images)}
+        for image in preferred_images:
             image_key = f"checksum:{image.checksum}" if image.checksum else f"url:{image.image_url}"
             if image_key in seen_images:
                 continue
@@ -83,6 +93,7 @@ def _to_lot_item(lot: Lot) -> LotItem:
                     )
                 )
                 continue
+            index = image_indexes.get(image.id, 0)
             public_url = f"/api/v1/media/vehicles/{lot.vin}/lots/{lot.lot_number}/images/{index}"
             safe_images.append(
                 LotImageItem(
@@ -135,13 +146,14 @@ def _to_lot_item(lot: Lot) -> LotItem:
 
 
 def _first_safe_image(lot: Lot) -> str | None:
-    images = sorted(lot.images, key=lambda item: ((item.shot_order is None), (item.shot_order or 0), item.created_at))
-    for index, image in enumerate(images):
-        if not _is_direct_image_url(image.image_url):
-            continue
+    images = _sorted_lot_images(lot)
+    preferred_images = _preferred_lot_images(lot)
+    image_indexes = {image.id: index for index, image in enumerate(images)}
+    for image in preferred_images:
         if image.image_url.startswith("/api/v1/media/archive/"):
             return image.image_url
         if hide_data_source():
+            index = image_indexes.get(image.id, 0)
             return f"/api/v1/media/vehicles/{lot.vin}/lots/{lot.lot_number}/images/{index}"
         return image.image_url
     return None
