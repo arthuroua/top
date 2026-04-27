@@ -5,6 +5,7 @@ import json
 import os
 import secrets
 import time
+from dataclasses import replace
 
 from fastapi import APIRouter, Depends, File, Header, HTTPException, Query, UploadFile, status
 from fastapi.responses import Response
@@ -584,15 +585,19 @@ def process_one_enrichment(db: Session = Depends(get_db)) -> dict:
 @router.post("/copart-csv/run-once", dependencies=[Depends(_require_admin)])
 def run_copart_csv_once(
     process_immediately: bool = Query(default=True),
-    max_process: int = Query(default=100, ge=0, le=1000),
+    max_process: int = Query(default=10, ge=0, le=100),
+    max_rows: int = Query(default=50, ge=1, le=500),
     db: Session = Depends(get_db),
 ) -> dict:
     try:
-        stats = run_copart_csv_ingestion(load_copart_csv_config())
+        config = load_copart_csv_config()
+        stats = run_copart_csv_ingestion(replace(config, max_rows_per_run=max_rows))
     except RedisError as exc:
         raise HTTPException(status_code=503, detail=f"Queue unavailable: {exc}") from exc
     except RuntimeError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(status_code=502, detail=f"Copart CSV import failed: {exc}") from exc
 
     processed = 0
     processing_errors: list[str] = []

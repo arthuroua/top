@@ -36,7 +36,7 @@ def copart_gallery_enabled() -> bool:
 
 
 def copart_gallery_max_images() -> int:
-    return _env_int("COPART_GALLERY_MAX_IMAGES_PER_LOT", 12, minimum=1, maximum=40)
+    return _env_int("COPART_GALLERY_MAX_IMAGES_PER_LOT", 8, minimum=1, maximum=40)
 
 
 def copart_gallery_url(lot_number: str, image_url: str | None = None) -> str:

@@ -620,7 +620,8 @@ export default function IngestionPage() {
     try {
       const params = new URLSearchParams({
         process_immediately: "true",
-        max_process: "100"
+        max_process: "10",
+        max_rows: "40"
       });
       const res = await fetch(`${API_BASE}/api/v1/ingestion/copart-csv/run-once?${params.toString()}`, {
         method: "POST",
