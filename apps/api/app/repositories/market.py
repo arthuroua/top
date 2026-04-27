@@ -16,6 +16,7 @@ from app.schemas import (
     MarketProviderHealth,
 )
 from app.services.connectors import connector_statuses
+from app.services.sales_status import confirmed_sale_status_clause
 
 
 def _percentile(values: list[int], q: float) -> float | None:
@@ -86,7 +87,11 @@ def get_market_comps(
         year=year,
     )
 
-    query = select(Lot, Vehicle).join(Vehicle, Lot.vin == Vehicle.vin).where(Lot.hammer_price_usd.is_not(None))
+    query = (
+        select(Lot, Vehicle)
+        .join(Vehicle, Lot.vin == Vehicle.vin)
+        .where(Lot.hammer_price_usd.is_not(None), confirmed_sale_status_clause(Lot.status))
+    )
     if vin_value:
         query = query.where(Lot.vin != vin_value)
     if make_value:
@@ -103,7 +108,11 @@ def get_market_comps(
     ).all()
 
     if not rows and year_value is not None:
-        query_without_year = select(Lot, Vehicle).join(Vehicle, Lot.vin == Vehicle.vin).where(Lot.hammer_price_usd.is_not(None))
+        query_without_year = (
+            select(Lot, Vehicle)
+            .join(Vehicle, Lot.vin == Vehicle.vin)
+            .where(Lot.hammer_price_usd.is_not(None), confirmed_sale_status_clause(Lot.status))
+        )
         if vin_value:
             query_without_year = query_without_year.where(Lot.vin != vin_value)
         if make_value:
@@ -223,7 +232,7 @@ def get_market_data_health(db: Session, *, window_hours: int) -> MarketDataHealt
     priced_lots = int(db.execute(select(func.count()).select_from(Lot).where(Lot.hammer_price_usd.is_not(None))).scalar() or 0)
     sold_lots = int(
         db.execute(
-            select(func.count()).select_from(Lot).where(func.lower(func.coalesce(Lot.status, "")).like("%sold%"))
+            select(func.count()).select_from(Lot).where(confirmed_sale_status_clause(Lot.status))
         ).scalar()
         or 0
     )

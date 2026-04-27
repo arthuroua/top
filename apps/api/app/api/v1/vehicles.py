@@ -9,6 +9,7 @@ from app.data.mock_data import MOCK_VEHICLES
 from app.db import get_db
 from app.models import Lot, LotImage, Vehicle
 from app.schemas import LotImageItem, LotItem, PriceEventItem, RecentVehicleItem, RecentVehiclesResponse, VehicleCard
+from app.services.sales_status import confirmed_sale_status_clause
 
 router = APIRouter(prefix="/api/v1", tags=["vehicles"])
 
@@ -166,6 +167,7 @@ def list_recent_vehicles(limit: int = 12, db: Session = Depends(get_db)) -> Rece
         db.execute(
             select(Lot)
             .options(selectinload(Lot.images), selectinload(Lot.vehicle))
+            .where(Lot.hammer_price_usd.is_not(None), confirmed_sale_status_clause(Lot.status))
             .order_by(Lot.fetched_at.desc(), Lot.sale_date.desc())
             .limit(safe_limit)
         )
@@ -204,6 +206,7 @@ def get_vehicle(vin: str, db: Session = Depends(get_db)) -> VehicleCard:
                 select(Lot)
                 .options(selectinload(Lot.images), selectinload(Lot.price_events), selectinload(Lot.import_snapshots))
                 .where(Lot.vin == vin_key)
+                .where(Lot.hammer_price_usd.is_not(None), confirmed_sale_status_clause(Lot.status))
                 .order_by(Lot.sale_date.desc(), Lot.fetched_at.desc())
             )
             .scalars()

@@ -16,6 +16,7 @@ import redis
 from app.schemas import IngestionJobPayload, IngestionPriceEvent
 from app.services.copart_gallery import fetch_copart_gallery_images
 from app.services.ingestion_queue import enqueue_ingestion_job
+from app.services.sales_status import is_confirmed_sale_status
 
 
 DEFAULT_URL_TEMPLATE = "https://inventory.copart.io/FTPLSTDM/salesdata.cgi?authKey={auth_key}"
@@ -209,20 +210,20 @@ def _to_job(row: dict[str, str]) -> IngestionJobPayload | None:
     elif image_thumb and _is_direct_image_url(image_thumb) and image_thumb not in images:
         images.append(image_thumb)
 
-    hammer_price = _parse_money_to_int(row.get("High Bid =non-vix,Sealed=Vix"))
+    status = str(row.get("Sale Status") or "").strip() or None
+    high_bid = _parse_money_to_int(row.get("High Bid =non-vix,Sealed=Vix"))
+    hammer_price = high_bid if is_confirmed_sale_status(status) else None
     event_time = _parse_event_time(row.get("Last Updated Time"))
     price_events: list[IngestionPriceEvent] = []
-    if hammer_price is not None:
+    if high_bid is not None:
         price_events.append(
             IngestionPriceEvent(
                 event_type="copart_high_bid",
                 old_value=None,
-                new_value=str(hammer_price),
+                new_value=str(high_bid),
                 event_time=event_time,
             )
         )
-
-    status = str(row.get("Sale Status") or "").strip() or None
 
     source_url = str(row.get("Link") or row.get("URL") or "").strip() or None
     model_group = str(row.get("Model Group") or "").strip()
