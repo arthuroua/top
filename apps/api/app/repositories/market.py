@@ -90,7 +90,7 @@ def get_market_comps(
     query = (
         select(Lot, Vehicle)
         .join(Vehicle, Lot.vin == Vehicle.vin)
-        .where(Lot.hammer_price_usd.is_not(None), confirmed_sale_status_clause(Lot.status))
+        .where(Lot.hammer_price_usd.is_not(None), Lot.hammer_price_usd > 0, confirmed_sale_status_clause(Lot.status))
     )
     if vin_value:
         query = query.where(Lot.vin != vin_value)
@@ -111,7 +111,7 @@ def get_market_comps(
         query_without_year = (
             select(Lot, Vehicle)
             .join(Vehicle, Lot.vin == Vehicle.vin)
-            .where(Lot.hammer_price_usd.is_not(None), confirmed_sale_status_clause(Lot.status))
+            .where(Lot.hammer_price_usd.is_not(None), Lot.hammer_price_usd > 0, confirmed_sale_status_clause(Lot.status))
         )
         if vin_value:
             query_without_year = query_without_year.where(Lot.vin != vin_value)
