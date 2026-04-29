@@ -19,6 +19,7 @@ type Props = {
     lead: string;
     make: string;
     model: string;
+    chooseMake: string;
     chooseModel: string;
     openBrand: string;
     openModel: string;
@@ -26,8 +27,8 @@ type Props = {
 };
 
 export function CarsQuickPicker({ brands, labels }: Props) {
-  const [selectedMake, setSelectedMake] = useState(brands[0]?.make ?? "");
-  const [selectedModel, setSelectedModel] = useState(brands[0]?.models[0] ?? "");
+  const [selectedMake, setSelectedMake] = useState("");
+  const [selectedModel, setSelectedModel] = useState("");
 
   const activeBrand = brands.find((item) => item.make === selectedMake) ?? null;
   const modelOptions = activeBrand?.models ?? [];
@@ -43,15 +44,15 @@ export function CarsQuickPicker({ brands, labels }: Props) {
   return (
     <section className="panel carsQuickPicker">
       <div className="carsQuickPickerIntro">
-        <p className="chip">{labels.chip}</p>
         <h2>{labels.title}</h2>
         <p>{labels.lead}</p>
       </div>
 
       <div className="carsQuickPickerPanel">
-        <label>
-          <span className="label">{labels.make}</span>
+        <label className="carsQuickPickerField">
+          <span className="carsQuickPickerFieldLabel">{labels.make}</span>
           <select value={selectedMake} onChange={(event) => handleMakeChange(event.target.value)}>
+            <option value="">{labels.chooseMake}</option>
             {brands.map((brand) => (
               <option key={brand.make} value={brand.make}>
                 {brand.make}
@@ -60,22 +61,19 @@ export function CarsQuickPicker({ brands, labels }: Props) {
           </select>
         </label>
 
-        <label>
-          <span className="label">{labels.model}</span>
+        <label className="carsQuickPickerField">
+          <span className="carsQuickPickerFieldLabel">{labels.model}</span>
           <select
             value={selectedModel}
             onChange={(event) => setSelectedModel(event.target.value)}
-            disabled={modelOptions.length === 0}
+            disabled={!selectedMake || modelOptions.length === 0}
           >
-            {modelOptions.length === 0 ? (
-              <option value="">{labels.chooseModel}</option>
-            ) : (
-              modelOptions.map((model) => (
-                <option key={`${selectedMake}-${model}`} value={model}>
-                  {model}
-                </option>
-              ))
-            )}
+            <option value="">{labels.chooseModel}</option>
+            {modelOptions.map((model) => (
+              <option key={`${selectedMake}-${model}`} value={model}>
+                {model}
+              </option>
+            ))}
           </select>
         </label>
 
@@ -83,7 +81,7 @@ export function CarsQuickPicker({ brands, labels }: Props) {
           <Link href={brandHref} className="ghostButton">
             {labels.openBrand}
           </Link>
-          <Link href={modelHref} className="button">
+          <Link href={modelHref} className={`button ${!selectedModel ? "isDisabledLink" : ""}`} aria-disabled={!selectedModel}>
             {labels.openModel}
           </Link>
         </div>

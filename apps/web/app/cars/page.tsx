@@ -69,6 +69,7 @@ export default async function CarsHubPage() {
             lead: dict.cars.quickLead,
             make: dict.cars.quickMake,
             model: dict.cars.quickModel,
+            chooseMake: dict.cars.quickChooseMake,
             chooseModel: dict.cars.quickChooseModel,
             openBrand: dict.cars.goBrand,
             openModel: dict.cars.quickOpenModel,
