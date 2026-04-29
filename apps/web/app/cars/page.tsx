@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { CarsQuickPicker } from "../../components/cars-quick-picker";
 import { fetchBrandModelMenu, fetchSeoPages, modelPageHref, resolveSeoCopy } from "../../lib/seoApi";
 import { getServerDictionary } from "../../lib/server-locale";
 
@@ -9,6 +10,13 @@ export default async function CarsHubPage() {
   const brands = await fetchSeoPages("brand");
   const clusters = await fetchSeoPages("cluster");
   const { dict, locale } = await getServerDictionary();
+  const quickPickerBrands = brands
+    .map((brand) => ({
+      make: brand.make || "",
+      slugPath: brand.slug_path,
+      models: brand.make ? fetchBrandModelMenu(brand.make) : [],
+    }))
+    .filter((brand) => brand.make && brand.models.length > 0);
 
   return (
     <main className="shell carsHubShell">
@@ -22,8 +30,8 @@ export default async function CarsHubPage() {
               <Link href="/search" className="button">
                 {dict.cars.openSearch}
               </Link>
-              <Link href="/about" className="ghostButton">
-                {dict.nav.about}
+              <Link href="/cars" className="ghostButton">
+                {dict.nav.catalog}
               </Link>
             </div>
           </div>
@@ -51,6 +59,22 @@ export default async function CarsHubPage() {
           </div>
         </div>
       </section>
+
+      {quickPickerBrands.length > 0 && (
+        <CarsQuickPicker
+          brands={quickPickerBrands}
+          labels={{
+            chip: dict.cars.quickChip,
+            title: dict.cars.quickTitle,
+            lead: dict.cars.quickLead,
+            make: dict.cars.quickMake,
+            model: dict.cars.quickModel,
+            chooseModel: dict.cars.quickChooseModel,
+            openBrand: dict.cars.goBrand,
+            openModel: dict.cars.quickOpenModel,
+          }}
+        />
+      )}
 
       <section className="carsHubGrid">
         {brands.map((brand) => {
