@@ -45,12 +45,10 @@ export function CarsQuickPicker({ brands, labels }: Props) {
     <section className="panel carsQuickPicker">
       <div className="carsQuickPickerIntro">
         <h2>{labels.title}</h2>
-        <p>{labels.lead}</p>
       </div>
 
       <div className="carsQuickPickerPanel">
         <label className="carsQuickPickerField">
-          <span className="carsQuickPickerFieldLabel">{labels.make}</span>
           <select value={selectedMake} onChange={(event) => handleMakeChange(event.target.value)}>
             <option value="">{labels.chooseMake}</option>
             {brands.map((brand) => (
@@ -62,7 +60,6 @@ export function CarsQuickPicker({ brands, labels }: Props) {
         </label>
 
         <label className="carsQuickPickerField">
-          <span className="carsQuickPickerFieldLabel">{labels.model}</span>
           <select
             value={selectedModel}
             onChange={(event) => setSelectedModel(event.target.value)}
@@ -78,11 +75,11 @@ export function CarsQuickPicker({ brands, labels }: Props) {
         </label>
 
         <div className="carsQuickPickerActions">
-          <Link href={brandHref} className="ghostButton">
-            {labels.openBrand}
-          </Link>
           <Link href={modelHref} className={`button ${!selectedModel ? "isDisabledLink" : ""}`} aria-disabled={!selectedModel}>
             {labels.openModel}
+          </Link>
+          <Link href={brandHref} className={`carsQuickPickerTextLink ${!selectedMake ? "isDisabledLink" : ""}`} aria-disabled={!selectedMake}>
+            {labels.openBrand}
           </Link>
         </div>
       </div>
