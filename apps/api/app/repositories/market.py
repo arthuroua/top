@@ -4,9 +4,8 @@ from datetime import datetime, timedelta, timezone
 from statistics import mean, median
 
 from sqlalchemy import case, func, select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
-from app.data.mock_data import MOCK_VEHICLES
 from app.models import IngestionConnectorRun, Lot, Vehicle
 from app.schemas import (
     MarketCompItem,
@@ -16,6 +15,7 @@ from app.schemas import (
     MarketProviderHealth,
 )
 from app.services.connectors import connector_statuses
+from app.services.public_lots import is_public_real_lot
 from app.services.sales_status import confirmed_sale_status_clause
 
 
@@ -52,12 +52,6 @@ def _resolve_target_profile(
             make_value = make_value or db_vehicle.make
             model_value = model_value or db_vehicle.model
             year_value = year_value or db_vehicle.year
-        else:
-            mock_vehicle = MOCK_VEHICLES.get(vin_value)
-            if mock_vehicle:
-                make_value = make_value or mock_vehicle.get("make")
-                model_value = model_value or mock_vehicle.get("model")
-                year_value = year_value or mock_vehicle.get("year")
 
     return (vin_value, make_value, model_value, year_value)
 
@@ -90,6 +84,7 @@ def get_market_comps(
     query = (
         select(Lot, Vehicle)
         .join(Vehicle, Lot.vin == Vehicle.vin)
+        .options(selectinload(Lot.import_snapshots))
         .where(Lot.hammer_price_usd.is_not(None), Lot.hammer_price_usd > 0, confirmed_sale_status_clause(Lot.status))
     )
     if vin_value:
@@ -111,6 +106,7 @@ def get_market_comps(
         query_without_year = (
             select(Lot, Vehicle)
             .join(Vehicle, Lot.vin == Vehicle.vin)
+            .options(selectinload(Lot.import_snapshots))
             .where(Lot.hammer_price_usd.is_not(None), Lot.hammer_price_usd > 0, confirmed_sale_status_clause(Lot.status))
         )
         if vin_value:
@@ -133,6 +129,8 @@ def get_market_comps(
     for lot, vehicle in rows:
         if lot.hammer_price_usd is None:
             continue
+        if not is_public_real_lot(lot):
+            continue
         score = _similarity_score(year_value, vehicle.year)
         items.append(
             MarketCompItem(
@@ -148,51 +146,6 @@ def get_market_comps(
                 similarity_score=round(score, 2),
             )
         )
-
-    if len(items) < limit:
-        existing_keys = {(item.vin, item.source.lower(), item.lot_number.upper()) for item in items}
-        for mock_vin, mock_vehicle in MOCK_VEHICLES.items():
-            mock_make = mock_vehicle.get("make")
-            mock_model = mock_vehicle.get("model")
-            mock_year = mock_vehicle.get("year")
-
-            if make_value and (mock_make or "").lower() != make_value.lower():
-                continue
-            if model_value and (mock_model or "").lower() != model_value.lower():
-                continue
-            if year_value is not None and isinstance(mock_year, int):
-                if not (year_value - 2 <= mock_year <= year_value + 2):
-                    continue
-
-            for lot in mock_vehicle.get("lots", []):
-                lot_source = str(lot.get("source") or "")
-                lot_number = str(lot.get("lot_number") or "")
-                price = lot.get("hammer_price_usd")
-                if not lot_source or not lot_number or not isinstance(price, int):
-                    continue
-                if source and lot_source.lower() != source.lower():
-                    continue
-
-                key = (mock_vin, lot_source.lower(), lot_number.upper())
-                if key in existing_keys:
-                    continue
-                existing_keys.add(key)
-
-                items.append(
-                    MarketCompItem(
-                        vin=mock_vin,
-                        make=mock_make,
-                        model=mock_model,
-                        year=mock_year if isinstance(mock_year, int) else None,
-                        source=lot_source,
-                        lot_number=lot_number,
-                        sale_date=str(lot.get("sale_date")) if lot.get("sale_date") else None,
-                        hammer_price_usd=price,
-                        location=lot.get("location"),
-                        similarity_score=round(_similarity_score(year_value, mock_year if isinstance(mock_year, int) else None), 2),
-                    )
-                )
-
     items.sort(
         key=lambda item: (
             item.similarity_score,

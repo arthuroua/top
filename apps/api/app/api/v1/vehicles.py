@@ -1,5 +1,4 @@
 import os
-from copy import deepcopy
 from urllib.parse import urlparse
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -7,10 +6,10 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.core.privacy import hide_data_source, public_source_label
-from app.data.mock_data import MOCK_VEHICLES
 from app.db import get_db
 from app.models import Lot, LotImage, Vehicle
 from app.schemas import LotImageItem, LotItem, PriceEventItem, RecentVehicleItem, RecentVehiclesResponse, VehicleCard
+from app.services.public_lots import is_public_real_lot, latest_import_payload
 from app.services.sales_status import confirmed_sale_status_clause
 
 router = APIRouter(prefix="/api/v1", tags=["vehicles"])
@@ -72,8 +71,7 @@ def _preferred_lot_images(lot: Lot) -> list[LotImage]:
 def _to_lot_item(lot: Lot) -> LotItem:
     images = _sorted_lot_images(lot)
     events = sorted(lot.price_events, key=lambda item: item.event_time, reverse=True)
-    latest_snapshot = max(lot.import_snapshots, key=lambda item: item.imported_at, default=None)
-    payload = latest_snapshot.payload_json if latest_snapshot else {}
+    payload = latest_import_payload(lot)
     auction_specs = {
         key: value
         for key, value in {
@@ -184,14 +182,15 @@ def list_recent_vehicles(limit: int = 12, db: Session = Depends(get_db)) -> Rece
     lots = (
         db.execute(
             select(Lot)
-            .options(selectinload(Lot.images), selectinload(Lot.vehicle))
+            .options(selectinload(Lot.images), selectinload(Lot.vehicle), selectinload(Lot.import_snapshots))
             .where(Lot.hammer_price_usd.is_not(None), Lot.hammer_price_usd > 0, confirmed_sale_status_clause(Lot.status))
             .order_by(Lot.fetched_at.desc(), Lot.sale_date.desc())
-            .limit(safe_limit)
+            .limit(max(safe_limit * 6, 48))
         )
         .scalars()
         .all()
     )
+    public_lots = [lot for lot in lots if is_public_real_lot(lot)][:safe_limit]
     return RecentVehiclesResponse(
         items=[
             RecentVehicleItem(
@@ -208,7 +207,7 @@ def list_recent_vehicles(limit: int = 12, db: Session = Depends(get_db)) -> Rece
                 image_url=_first_safe_image(lot),
                 updated_at=lot.fetched_at,
             )
-            for lot in lots
+            for lot in public_lots
         ]
     )
 
@@ -230,22 +229,14 @@ def get_vehicle(vin: str, db: Session = Depends(get_db)) -> VehicleCard:
             .scalars()
             .all()
         )
+        public_lots = [lot for lot in lots if is_public_real_lot(lot)]
         return VehicleCard(
             vin=vin_key,
             make=vehicle.make,
             model=vehicle.model,
             year=vehicle.year,
             title_brand=vehicle.title_brand,
-            lots=[_to_lot_item(lot) for lot in lots],
+            lots=[_to_lot_item(lot) for lot in public_lots],
         )
-
-    fallback_vehicle = MOCK_VEHICLES.get(vin_key)
-    if fallback_vehicle:
-        if not hide_data_source():
-            return VehicleCard(**fallback_vehicle)
-        payload = deepcopy(fallback_vehicle)
-        for lot in payload.get("lots", []):
-            lot["source"] = public_source_label()
-        return VehicleCard(**payload)
 
     raise HTTPException(status_code=404, detail="Vehicle not found")

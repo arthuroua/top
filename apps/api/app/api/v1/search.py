@@ -3,13 +3,13 @@ from urllib.parse import parse_qs, unquote, urlparse
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.core.privacy import hide_data_source
-from app.data.mock_data import MOCK_VEHICLES
 from app.db import get_db
 from app.models import Lot, Vehicle
 from app.schemas import SearchResolveResult, SearchResult
+from app.services.public_lots import is_public_real_lot
 
 router = APIRouter(prefix="/api/v1", tags=["search"])
 
@@ -105,40 +105,32 @@ def _search_vin_in_db(db: Session, vin_key: str) -> SearchResult | None:
     vehicle = db.get(Vehicle, vin_key)
     if vehicle is None:
         return None
-    lots = db.execute(select(Lot).where(Lot.vin == vin_key).order_by(Lot.sale_date.desc(), Lot.fetched_at.desc())).scalars().all()
+    lots = (
+        db.execute(
+            select(Lot)
+            .options(selectinload(Lot.import_snapshots))
+            .where(Lot.vin == vin_key)
+            .order_by(Lot.sale_date.desc(), Lot.fetched_at.desc())
+        )
+        .scalars()
+        .all()
+    )
+    lots = [lot for lot in lots if is_public_real_lot(lot)]
+    if not lots:
+        return None
     latest_status = lots[0].status if lots and lots[0].status else "Unknown"
     return SearchResult(vin=vin_key, lots_found=len(lots), latest_status=latest_status)
 
 
-def _search_vin_in_mock(vin_key: str) -> SearchResult | None:
-    fallback_vehicle = MOCK_VEHICLES.get(vin_key)
-    if not fallback_vehicle:
-        return None
-    fallback_lots = fallback_vehicle.get("lots", [])
-    latest_status = fallback_lots[0]["status"] if fallback_lots else "Unknown"
-    return SearchResult(vin=vin_key, lots_found=len(fallback_lots), latest_status=latest_status)
-
-
 def _find_vin_by_lot_in_db(db: Session, lot_number: str, source_hint: str | None) -> tuple[str, str | None] | None:
-    query = select(Lot).where(func.upper(Lot.lot_number) == lot_number)
+    query = select(Lot).options(selectinload(Lot.import_snapshots)).where(func.upper(Lot.lot_number) == lot_number)
     if source_hint:
         query = query.where(func.lower(Lot.source) == source_hint)
     query = query.order_by(Lot.sale_date.desc(), Lot.fetched_at.desc())
-    lot = db.execute(query).scalars().first()
-    if lot is None:
-        return None
-    return (lot.vin, lot.source.lower())
-
-
-def _find_vin_by_lot_in_mock(lot_number: str, source_hint: str | None) -> tuple[str, str | None] | None:
-    lot_key = lot_number.upper()
-    for vin, vehicle in MOCK_VEHICLES.items():
-        for lot in vehicle.get("lots", []):
-            source_value = str(lot.get("source") or "").lower()
-            if source_hint and source_value != source_hint:
-                continue
-            if str(lot.get("lot_number") or "").upper() == lot_key:
-                return (vin, source_value or None)
+    lots = db.execute(query).scalars().all()
+    for lot in lots:
+        if is_public_real_lot(lot):
+            return (lot.vin, lot.source.lower())
     return None
 
 
@@ -149,10 +141,6 @@ def search(vin: str = Query(min_length=17, max_length=17), db: Session = Depends
     db_result = _search_vin_in_db(db, vin_key)
     if db_result is not None:
         return db_result
-
-    mock_result = _search_vin_in_mock(vin_key)
-    if mock_result is not None:
-        return mock_result
 
     raise HTTPException(status_code=404, detail="VIN not found")
 
@@ -168,13 +156,11 @@ def resolve_search(query: str = Query(min_length=1, max_length=1024), db: Sessio
     else:
         lot_result = _find_vin_by_lot_in_db(db, normalized_query, source_hint)
         if lot_result is None:
-            lot_result = _find_vin_by_lot_in_mock(normalized_query, source_hint)
-        if lot_result is None:
             raise HTTPException(status_code=404, detail="Lot not found")
         vin_key, matched_source = lot_result
 
     db_result = _search_vin_in_db(db, vin_key)
-    result = db_result or _search_vin_in_mock(vin_key)
+    result = db_result
     if result is None:
         raise HTTPException(status_code=404, detail="Vehicle not found")
 
