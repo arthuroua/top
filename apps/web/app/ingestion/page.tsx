@@ -89,6 +89,7 @@ type EnrichmentProcessResult = {
   processed_jobs?: number;
   total_images_added?: number;
   remaining_queue_depth?: number;
+  failed_jobs?: number;
 };
 
 type AutoRiaSnapshotResult = {
@@ -1459,6 +1460,7 @@ export default function IngestionPage() {
             </p>
             <p>Images added: {enrichmentProcessResult.images_added}</p>
             <p>Jobs processed: {enrichmentProcessResult.processed_jobs ?? (enrichmentProcessResult.processed ? 1 : 0)}</p>
+            <p>Jobs failed: {enrichmentProcessResult.failed_jobs ?? 0}</p>
             <p>Total images added: {enrichmentProcessResult.total_images_added ?? enrichmentProcessResult.images_added}</p>
             <p>Queue depth now: {enrichmentProcessResult.remaining_queue_depth ?? enrichmentDepthResult?.queue_depth ?? "-"}</p>
           </div>

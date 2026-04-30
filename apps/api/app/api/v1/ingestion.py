@@ -629,12 +629,23 @@ def process_one_enrichment(db: Session = Depends(get_db)) -> dict:
     if job is None:
         return {"processed": False, "message": "No enrichment jobs in queue", "images_added": 0}
 
-    return enrich_lot_images(
-        db,
-        source=str(job.get("source") or "copart"),
-        lot_number=str(job.get("lot_number") or ""),
-        vin=str(job.get("vin")) if job.get("vin") else None,
-    )
+    try:
+        return enrich_lot_images(
+            db,
+            source=str(job.get("source") or "copart"),
+            lot_number=str(job.get("lot_number") or ""),
+            vin=str(job.get("vin")) if job.get("vin") else None,
+        )
+    except Exception as exc:  # noqa: BLE001
+        db.rollback()
+        return {
+            "processed": False,
+            "message": f"Enrichment failed: {str(exc)[:240]}",
+            "vin": str(job.get("vin")) if job.get("vin") else None,
+            "source": str(job.get("source") or "copart"),
+            "lot_number": str(job.get("lot_number") or ""),
+            "images_added": 0,
+        }
 
 
 @router.post("/enrichment/process-batch", dependencies=[Depends(_require_admin)])
@@ -645,6 +656,8 @@ def process_batch_enrichment(
     processed_jobs = 0
     total_images_added = 0
     last_result: dict | None = None
+    failed_jobs = 0
+    last_error: str | None = None
 
     for _ in range(max_jobs):
         try:
@@ -654,17 +667,23 @@ def process_batch_enrichment(
         if job is None:
             break
 
-        result = enrich_lot_images(
-            db,
-            source=str(job.get("source") or "copart"),
-            lot_number=str(job.get("lot_number") or ""),
-            vin=str(job.get("vin")) if job.get("vin") else None,
-        )
-        processed_jobs += 1
-        total_images_added += int(result.get("images_added") or 0)
-        last_result = result
+        try:
+            result = enrich_lot_images(
+                db,
+                source=str(job.get("source") or "copart"),
+                lot_number=str(job.get("lot_number") or ""),
+                vin=str(job.get("vin")) if job.get("vin") else None,
+            )
+            processed_jobs += 1
+            total_images_added += int(result.get("images_added") or 0)
+            last_result = result
+        except Exception as exc:  # noqa: BLE001
+            db.rollback()
+            failed_jobs += 1
+            last_error = str(exc)[:240]
+            continue
 
-    if processed_jobs == 0:
+    if processed_jobs == 0 and failed_jobs == 0:
         try:
             remaining_depth = enrichment_queue_depth()
         except RedisError as exc:
@@ -683,14 +702,21 @@ def process_batch_enrichment(
     except RedisError as exc:
         raise HTTPException(status_code=503, detail=f"Queue unavailable: {exc}") from exc
 
-    message = f"Processed {processed_jobs} enrichment job{'s' if processed_jobs != 1 else ''}"
+    success_message = f"Processed {processed_jobs} enrichment job{'s' if processed_jobs != 1 else ''}"
+    if failed_jobs:
+        message = f"{success_message}; failed jobs: {failed_jobs}" + (f" ({last_error})" if last_error else "")
+    elif processed_jobs == 0:
+        message = f"No successful enrichment jobs; failed jobs: {failed_jobs}" + (f" ({last_error})" if last_error else "")
+    else:
+        message = success_message
     payload = {
-        "processed": True,
+        "processed": processed_jobs > 0,
         "message": message,
         "images_added": int(last_result.get("images_added") or 0) if last_result else 0,
         "processed_jobs": processed_jobs,
         "total_images_added": total_images_added,
         "remaining_queue_depth": remaining_depth,
+        "failed_jobs": failed_jobs,
     }
     if last_result:
         payload["vin"] = last_result.get("vin")
