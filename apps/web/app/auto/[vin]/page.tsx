@@ -129,6 +129,16 @@ function toVehicleName(vehicle: VehicleResponse): string {
   return parts.length > 0 ? parts.join(" ") : "Vehicle";
 }
 
+function toVehicleMonogram(vehicle: VehicleResponse): string {
+  const source = [vehicle.make, vehicle.model].filter(Boolean).join(" ").trim() || vehicle.vin;
+  return source
+    .split(/[\s-]+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() || "")
+    .join("");
+}
+
 function toMoney(value: number | null | undefined): string {
   if (value === null || value === undefined) return "-";
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(
@@ -342,6 +352,7 @@ export default async function AutoSeoPage({ params }: PageProps) {
   const decoded = await getDecoded(vin);
   const market = await getMarket(vin);
   const vehicleName = toVehicleName(vehicle);
+  const vehicleMonogram = toVehicleMonogram(vehicle);
   const lots = vehicle.lots || [];
   const images = collectImages(lots);
   const latestLot = lots[0];
@@ -473,10 +484,11 @@ export default async function AutoSeoPage({ params }: PageProps) {
           {hasLatestLotImages ? (
             <AutoPhotoGallery images={latestLotImages} vehicleName={vehicleName} />
           ) : (
-            <div className="spotlightEmpty autoNoPhotoPanel">
-              <p className="label">Фото</p>
-              <h3>Фото ще не завантажені</h3>
-              <p>Для цього завершеного лота зараз збережені ціна, статус, VIN і характеристики, але саме фото джерело ще не віддало в імпорт.</p>
+            <div className="spotlightEmpty autoNoPhotoPanel autoPhotoPlaceholder">
+              <div className="autoPhotoPlaceholderBadge">Photo pending</div>
+              <strong>{vehicleMonogram}</strong>
+              <h3>{vehicleName}</h3>
+              <p>Price, status, VIN, and auction specs are already saved. The image set for this completed lot has not been delivered by the source yet.</p>
             </div>
           )}
           <aside className="autoBidfaxSummary">
@@ -510,6 +522,14 @@ export default async function AutoSeoPage({ params }: PageProps) {
                 <dt>{dict.auto.images}</dt>
                 <dd>{latestLotImages.length}</dd>
               </div>
+              <div>
+                <dt>Status</dt>
+                <dd>{latestLot?.status || "-"}</dd>
+              </div>
+              <div>
+                <dt>Lot</dt>
+                <dd>#{latestLot?.lot_number || "-"}</dd>
+              </div>
             </dl>
           </aside>
         </div>
@@ -522,30 +542,6 @@ export default async function AutoSeoPage({ params }: PageProps) {
           {riskText.reasons.slice(0, 2).map((reason) => (
             <span key={reason}>{reason}</span>
           ))}
-        </section>
-      )}
-
-      {latestLot && (
-        <section className="panel autoSeoSection autoCompactOverview">
-          <h2>{dict.auto.knowTitle}</h2>
-          <p>
-            {latestLot.source} #{latestLot.lot_number}. Status: {latestLot.status || "-"}. Location: {latestLot.location || "-"}.
-            Photos: {latestLotImages.length}.
-          </p>
-          <div className="autoSeoQuickFacts">
-            <div>
-              <p className="label">Damage</p>
-              <strong>{latestLot.primary_damage || "-"}</strong>
-            </div>
-            <div>
-              <p className="label">Odometer</p>
-              <strong>{latestLot.odometer ? `${latestLot.odometer.toLocaleString("en-US")} mi` : "-"}</strong>
-            </div>
-            <div>
-              <p className="label">Run & drive</p>
-              <strong>{toYesNo(latestLot.run_and_drive)}</strong>
-            </div>
-          </div>
         </section>
       )}
 

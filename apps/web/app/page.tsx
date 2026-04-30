@@ -86,7 +86,6 @@ export default function HomePage() {
   const [query, setQuery] = useState("");
   const [vehicles, setVehicles] = useState<RecentVehicle[]>([]);
   const [loading, setLoading] = useState(true);
-  const [recentPhotosMissing, setRecentPhotosMissing] = useState(false);
   const quickPickerBrands = useMemo(
     () =>
       SEO_MODEL_MENU.map((item) => ({
@@ -107,8 +106,7 @@ export default function HomePage() {
         const primaryItems = primaryData.items || [];
         const primaryWithPhotos = primaryItems.filter((item) => Boolean(item.image_url));
         if (alive) {
-          setVehicles(primaryWithPhotos.slice(0, 8));
-          setRecentPhotosMissing(primaryItems.length > 0 && primaryWithPhotos.length === 0);
+          setVehicles((primaryWithPhotos.length > 0 ? primaryWithPhotos : primaryItems).slice(0, 8));
         }
       } finally {
         if (alive) setLoading(false);
@@ -124,6 +122,16 @@ export default function HomePage() {
     const clean = query.trim();
     return clean ? `/search?query=${encodeURIComponent(clean)}` : "/search";
   }, [query]);
+
+  const toMonogram = (item: RecentVehicle) => {
+    const source = [item.make, item.model].filter(Boolean).join(" ").trim() || item.vin;
+    return source
+      .split(/[\s-]+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase() || "")
+      .join("");
+  };
 
   return (
     <main className="shell homeSimpleShell">
@@ -184,8 +192,15 @@ export default function HomePage() {
               const imageUrl = toDisplayImageUrl(item.image_url);
               return (
                 <Link key={`${item.vin}-${item.lot_number}`} href={`/auto/${item.vin}`} className="recentVehicleCard">
-                  <div className="recentVehicleImage">
-                    {imageUrl ? <img src={imageUrl} alt={toVehicleName(item)} loading="lazy" /> : null}
+                  <div className={`recentVehicleImage ${imageUrl ? "" : "recentVehicleImagePlaceholder"}`}>
+                    {imageUrl ? (
+                      <img src={imageUrl} alt={toVehicleName(item)} loading="lazy" />
+                    ) : (
+                      <div className="recentVehicleImageFallback" aria-hidden="true">
+                        <strong>{toMonogram(item)}</strong>
+                        <span>Photo pending</span>
+                      </div>
+                    )}
                   </div>
                   <div className="recentVehicleBody">
                     <p className="label">VIN {item.vin}</p>
@@ -203,14 +218,6 @@ export default function HomePage() {
                 </Link>
               );
             })}
-          </div>
-        ) : recentPhotosMissing ? (
-          <div className="recentEmpty">
-            <h3>Фото ще не завантажені</h3>
-            <p>У базі вже є завершені лоти, але для останніх записів джерело ще не віддало зображення. Ціни й статуси збережені, фото підтягнемо окремим імпортом.</p>
-            <Link href="/search" className="button">
-              {dict.home.openSearch}
-            </Link>
           </div>
         ) : (
           <div className="recentEmpty">

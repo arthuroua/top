@@ -432,6 +432,31 @@ a {
   display: block;
 }
 
+.recentVehicleImagePlaceholder {
+  background:
+    radial-gradient(220px 120px at 100% 0%, rgba(235, 181, 77, 0.16), transparent 60%),
+    linear-gradient(180deg, #edf3fb, #e3ebf6);
+}
+
+.recentVehicleImageFallback {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  text-align: center;
+}
+
+.recentVehicleImageFallback strong {
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1;
+  color: var(--text);
+}
+
+.recentVehicleImageFallback span {
+  font-size: 0.88rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
 .recentVehicleBody {
   display: grid;
   gap: 9px;
@@ -1985,6 +2010,30 @@ select:focus {
 
 .autoNoPhotoPanel p {
   max-width: 56ch;
+}
+
+.autoPhotoPlaceholder {
+  place-items: center;
+  text-align: center;
+  padding: 28px;
+}
+
+.autoPhotoPlaceholder strong {
+  font-size: clamp(4rem, 9vw, 6.5rem);
+  line-height: 1;
+  color: var(--accent);
+}
+
+.autoPhotoPlaceholderBadge {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 8px 12px;
+  font-family: var(--font-mono), Consolas, monospace;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.78);
 }
 
 .adminSeoActions {
