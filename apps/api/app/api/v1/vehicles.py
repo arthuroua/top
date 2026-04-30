@@ -1,4 +1,6 @@
+import os
 from copy import deepcopy
+from urllib.parse import urlparse
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import func, select
@@ -41,12 +43,28 @@ def _is_direct_image_url(url: str) -> bool:
     return lowered.endswith((".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp", ".avif"))
 
 
+def _public_media_allowed_hosts() -> tuple[str, ...]:
+    raw = os.getenv("MEDIA_PROXY_ALLOWED_HOSTS", "copart.com,iaai.com,riastatic.com,auto.ria.com")
+    return tuple(host.strip().lower().lstrip(".") for host in raw.split(",") if host.strip())
+
+
+def _is_public_proxyable_image_url(url: str) -> bool:
+    if url.startswith("/api/v1/media/archive/"):
+        return True
+    if not _is_direct_image_url(url):
+        return False
+    hostname = (urlparse(url).hostname or "").lower().lstrip(".")
+    if not hostname:
+        return False
+    return any(hostname == allowed or hostname.endswith(f".{allowed}") for allowed in _public_media_allowed_hosts())
+
+
 def _sorted_lot_images(lot: Lot) -> list[LotImage]:
     return sorted(lot.images, key=lambda item: ((item.shot_order is None), (item.shot_order or 0), item.created_at))
 
 
 def _preferred_lot_images(lot: Lot) -> list[LotImage]:
-    images = [image for image in _sorted_lot_images(lot) if _is_direct_image_url(image.image_url)]
+    images = [image for image in _sorted_lot_images(lot) if _is_public_proxyable_image_url(image.image_url)]
     archived_images = [image for image in images if image.image_url.startswith("/api/v1/media/archive/")]
     return archived_images or images
 

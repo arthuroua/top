@@ -17,7 +17,7 @@ router = APIRouter(prefix="/api/v1/media", tags=["media"])
 
 
 def _allowed_hosts() -> tuple[str, ...]:
-    raw = os.getenv("MEDIA_PROXY_ALLOWED_HOSTS", "copart.com,iaai.com,riastatic.com")
+    raw = os.getenv("MEDIA_PROXY_ALLOWED_HOSTS", "copart.com,iaai.com,riastatic.com,auto.ria.com")
     return tuple(
         host.strip().lower().lstrip(".")
         for host in raw.split(",")
