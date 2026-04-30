@@ -47,15 +47,19 @@ def _public_media_allowed_hosts() -> tuple[str, ...]:
     return tuple(host.strip().lower().lstrip(".") for host in raw.split(",") if host.strip())
 
 
-def _is_public_proxyable_image_url(url: str) -> bool:
-    if url.startswith("/api/v1/media/archive/"):
-        return True
-    if not _is_direct_image_url(url):
-        return False
+def _is_allowed_public_host(url: str) -> bool:
     hostname = (urlparse(url).hostname or "").lower().lstrip(".")
     if not hostname:
         return False
     return any(hostname == allowed or hostname.endswith(f".{allowed}") for allowed in _public_media_allowed_hosts())
+
+
+def _is_public_proxyable_image_url(url: str) -> bool:
+    if url.startswith("/api/v1/media/archive/"):
+        return True
+    if _is_allowed_public_host(url):
+        return True
+    return _is_direct_image_url(url)
 
 
 def _sorted_lot_images(lot: Lot) -> list[LotImage]:
@@ -190,7 +194,9 @@ def list_recent_vehicles(limit: int = 12, db: Session = Depends(get_db)) -> Rece
         .scalars()
         .all()
     )
-    public_lots = [lot for lot in lots if is_public_real_lot(lot)][:safe_limit]
+    public_lots = [lot for lot in lots if is_public_real_lot(lot)]
+    public_lots.sort(key=lambda lot: (_first_safe_image(lot) is not None, lot.fetched_at), reverse=True)
+    public_lots = public_lots[:safe_limit]
     return RecentVehiclesResponse(
         items=[
             RecentVehicleItem(

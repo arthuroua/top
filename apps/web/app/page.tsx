@@ -3,7 +3,9 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
+import { CarsQuickPicker } from "../components/cars-quick-picker";
 import { useI18n } from "../components/i18n-provider";
+import { SEO_MODEL_MENU, brandHref } from "../lib/seoCatalog";
 
 type RecentVehicle = {
   vin: string;
@@ -69,15 +71,28 @@ export default function HomePage() {
   const [query, setQuery] = useState("");
   const [vehicles, setVehicles] = useState<RecentVehicle[]>([]);
   const [loading, setLoading] = useState(true);
+  const quickPickerBrands = useMemo(
+    () =>
+      SEO_MODEL_MENU.map((item) => ({
+        make: item.make,
+        slugPath: brandHref(item.make).replace(/^\/cars\//, ""),
+        models: item.models
+      })),
+    []
+  );
 
   useEffect(() => {
     let alive = true;
     async function loadRecent() {
       try {
-        const response = await fetch(`${API_BASE}/api/v1/vehicles/recent?limit=8`);
+        const response = await fetch(`${API_BASE}/api/v1/vehicles/recent?limit=24`);
         if (!response.ok) return;
         const data = (await response.json()) as RecentVehiclesResponse;
-        if (alive) setVehicles(data.items || []);
+        if (alive) {
+          const items = data.items || [];
+          const withPhotos = items.filter((item) => Boolean(item.image_url));
+          setVehicles((withPhotos.length > 0 ? withPhotos : items).slice(0, 8));
+        }
       } finally {
         if (alive) setLoading(false);
       }
@@ -114,6 +129,21 @@ export default function HomePage() {
           <Link href="/reports">{dict.nav.reports}</Link>
         </div>
       </section>
+
+      <CarsQuickPicker
+        brands={quickPickerBrands}
+        labels={{
+          chip: dict.cars.quickChip,
+          title: dict.cars.quickTitle,
+          lead: dict.cars.quickLead,
+          make: dict.cars.quickMake,
+          model: dict.cars.quickModel,
+          chooseMake: dict.cars.quickChooseMake,
+          chooseModel: dict.cars.quickChooseModel,
+          openBrand: dict.cars.goBrand,
+          openModel: dict.cars.quickOpenModel
+        }}
+      />
 
       <section className="recentVehiclesSection">
         <div className="simpleSectionHead">
