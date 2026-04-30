@@ -4,7 +4,7 @@ from sqlalchemy import func, or_
 from sqlalchemy.sql.elements import ColumnElement
 
 
-CONFIRMED_SALE_KEYWORDS = ("sold", "closed", "paid", "won")
+CONFIRMED_SALE_KEYWORDS = ("sold", "closed")
 
 
 def is_confirmed_sale_status(status: str | None) -> bool:

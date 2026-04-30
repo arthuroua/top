@@ -189,7 +189,7 @@ def list_recent_vehicles(limit: int = 12, db: Session = Depends(get_db)) -> Rece
             .options(selectinload(Lot.images), selectinload(Lot.vehicle), selectinload(Lot.import_snapshots))
             .where(Lot.hammer_price_usd.is_not(None), Lot.hammer_price_usd > 0, confirmed_sale_status_clause(Lot.status))
             .order_by(Lot.fetched_at.desc(), Lot.sale_date.desc())
-            .limit(max(safe_limit * 6, 48))
+            .limit(max(safe_limit * 20, 240))
         )
         .scalars()
         .all()
