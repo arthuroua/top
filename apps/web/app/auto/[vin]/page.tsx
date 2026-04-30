@@ -485,10 +485,10 @@ export default async function AutoSeoPage({ params }: PageProps) {
             <AutoPhotoGallery images={latestLotImages} vehicleName={vehicleName} />
           ) : (
             <div className="spotlightEmpty autoNoPhotoPanel autoPhotoPlaceholder">
-              <div className="autoPhotoPlaceholderBadge">Photo pending</div>
+              <div className="autoPhotoPlaceholderBadge">{dict.auto.photoPendingBadge}</div>
               <strong>{vehicleMonogram}</strong>
               <h3>{vehicleName}</h3>
-              <p>Price, status, VIN, and auction specs are already saved. The image set for this completed lot has not been delivered by the source yet.</p>
+              <p>{dict.auto.photoPendingLead}</p>
             </div>
           )}
           <aside className="autoBidfaxSummary">

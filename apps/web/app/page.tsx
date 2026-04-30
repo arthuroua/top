@@ -198,7 +198,7 @@ export default function HomePage() {
                     ) : (
                       <div className="recentVehicleImageFallback" aria-hidden="true">
                         <strong>{toMonogram(item)}</strong>
-                        <span>Photo pending</span>
+                        <span>{dict.home.recentPhotoPending}</span>
                       </div>
                     )}
                   </div>
