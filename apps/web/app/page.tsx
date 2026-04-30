@@ -71,7 +71,6 @@ export default function HomePage() {
   const [query, setQuery] = useState("");
   const [vehicles, setVehicles] = useState<RecentVehicle[]>([]);
   const [loading, setLoading] = useState(true);
-  const [usedFallbackRecent, setUsedFallbackRecent] = useState(false);
   const quickPickerBrands = useMemo(
     () =>
       SEO_MODEL_MENU.map((item) => ({
@@ -91,27 +90,8 @@ export default function HomePage() {
         const primaryData = (await primaryResponse.json()) as RecentVehiclesResponse;
         const primaryItems = primaryData.items || [];
         const primaryWithPhotos = primaryItems.filter((item) => Boolean(item.image_url));
-        if (alive && primaryWithPhotos.length > 0) {
-          setVehicles(primaryWithPhotos.slice(0, 8));
-          setUsedFallbackRecent(false);
-          return;
-        }
-
-        const fallbackResponse = await fetch(`${API_BASE}/api/v1/vehicles/recent?limit=24&final_only=false`);
-        if (!fallbackResponse.ok) {
-          if (alive) {
-            setVehicles(primaryItems.slice(0, 8));
-            setUsedFallbackRecent(primaryItems.length > 0);
-          }
-          return;
-        }
-        const fallbackData = (await fallbackResponse.json()) as RecentVehiclesResponse;
-        const fallbackItems = fallbackData.items || [];
-        const fallbackWithPhotos = fallbackItems.filter((item) => Boolean(item.image_url));
         if (alive) {
-          const chosen = fallbackWithPhotos.length > 0 ? fallbackWithPhotos : fallbackItems;
-          setVehicles(chosen.slice(0, 8));
-          setUsedFallbackRecent(chosen.length > 0);
+          setVehicles((primaryWithPhotos.length > 0 ? primaryWithPhotos : primaryItems).slice(0, 8));
         }
       } finally {
         if (alive) setLoading(false);
@@ -169,7 +149,6 @@ export default function HomePage() {
         <div className="simpleSectionHead">
           <div>
             <h2>{dict.home.recentTitle}</h2>
-            {usedFallbackRecent ? <p className="muted">Показані останні реальні лоти, поки фінальні продажі ще не завантажені.</p> : null}
           </div>
           <Link href="/cars" className="ghostButton">
             {dict.nav.catalog}
@@ -221,3 +200,4 @@ export default function HomePage() {
     </main>
   );
 }
+

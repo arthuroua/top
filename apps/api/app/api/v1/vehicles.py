@@ -187,6 +187,7 @@ def list_recent_vehicles(
     db: Session = Depends(get_db),
 ) -> RecentVehiclesResponse:
     safe_limit = min(max(limit, 1), 24)
+    fetch_window = max(safe_limit * 250, 3000) if final_only else max(safe_limit * 20, 240)
     query = (
         select(Lot)
         .options(selectinload(Lot.images), selectinload(Lot.vehicle), selectinload(Lot.import_snapshots))
@@ -194,7 +195,7 @@ def list_recent_vehicles(
     )
     if final_only:
         query = query.where(confirmed_sale_status_clause(Lot.status))
-    lots = db.execute(query.order_by(Lot.fetched_at.desc(), Lot.sale_date.desc()).limit(max(safe_limit * 20, 240))).scalars().all()
+    lots = db.execute(query.order_by(Lot.sale_date.desc(), Lot.fetched_at.desc()).limit(fetch_window)).scalars().all()
     public_lots = [lot for lot in lots if is_public_real_lot(lot)]
     public_lots.sort(key=lambda lot: (_first_safe_image(lot) is not None, lot.fetched_at), reverse=True)
     public_lots = public_lots[:safe_limit]
@@ -237,6 +238,8 @@ def get_vehicle(vin: str, db: Session = Depends(get_db)) -> VehicleCard:
             .all()
         )
         public_lots = [lot for lot in lots if is_public_real_lot(lot)]
+        if not public_lots:
+            raise HTTPException(status_code=404, detail="Vehicle not found")
         return VehicleCard(
             vin=vin_key,
             make=vehicle.make,
