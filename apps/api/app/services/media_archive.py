@@ -32,8 +32,10 @@ def _env_int(name: str, default: int, minimum: int = 0, maximum: int | None = No
 
 
 def _allowed_hosts() -> tuple[str, ...]:
-    raw = os.getenv("MEDIA_ARCHIVE_ALLOWED_HOSTS", "copart.com,iaai.com,riastatic.com,auto.ria.com")
-    return tuple(host.strip().lower().lstrip(".") for host in raw.split(",") if host.strip())
+    raw = os.getenv("MEDIA_ARCHIVE_ALLOWED_HOSTS", "copart.com,copart.io,iaai.com,vis.iaai.com,riastatic.com,auto.ria.com")
+    values = {host.strip().lower().lstrip(".") for host in raw.split(",") if host.strip()}
+    values.update({"copart.com", "copart.io", "iaai.com", "vis.iaai.com", "riastatic.com", "auto.ria.com"})
+    return tuple(sorted(values))
 
 
 def _is_host_allowed(url: str) -> bool:

@@ -536,32 +536,83 @@ def get_enrichment_queue_depth() -> dict:
 @router.post("/enrichment/enqueue-recent", dependencies=[Depends(_require_admin)])
 def enqueue_recent_enrichment(
     limit: int = Query(default=500, ge=1, le=5000),
+    source: str | None = Query(default=None),
+    missing_only: bool = Query(default=False),
+    include_zero_image: bool = Query(default=False),
     only_single_image: bool = Query(default=True),
     db: Session = Depends(get_db),
 ) -> dict:
-    lots = (
-        db.execute(
-            select(Lot)
-            .options(selectinload(Lot.images))
-            .where(Lot.source == "copart")
-            .order_by(Lot.fetched_at.desc())
-            .limit(limit)
-        )
-        .scalars()
-        .all()
+    query = (
+        select(Lot)
+        .options(selectinload(Lot.images))
+        .order_by(Lot.fetched_at.desc())
+        .limit(limit)
     )
+    if source:
+        normalized_source = source.strip().lower()
+        if normalized_source not in {"copart", "iaai"}:
+            raise HTTPException(status_code=400, detail="source must be copart or iaai")
+        query = query.where(Lot.source == normalized_source)
+
+    lots = db.execute(query).scalars().all()
 
     enqueued = 0
     last_depth = 0
     for lot in lots:
-        if only_single_image and len(lot.images) != 1:
-            continue
-        if not lot.images:
-            continue
+        image_count = len(lot.images)
+        if missing_only:
+            if include_zero_image:
+                if image_count > 0:
+                    continue
+            elif only_single_image and image_count != 1:
+                continue
+            elif not only_single_image and image_count > 1:
+                continue
+        else:
+            if only_single_image and image_count != 1:
+                continue
+            if not lot.images:
+                continue
         last_depth = enqueue_enrichment_job({"source": lot.source, "lot_number": lot.lot_number, "vin": lot.vin})
         enqueued += 1
 
     return {"enqueued": enqueued, "queue_depth": last_depth}
+
+
+@router.post("/enrichment/enqueue-missing-photos", dependencies=[Depends(_require_admin)])
+def enqueue_missing_photo_enrichment(
+    limit: int = Query(default=500, ge=1, le=5000),
+    source: str | None = Query(default=None),
+    max_existing_images: int = Query(default=0, ge=0, le=5),
+    db: Session = Depends(get_db),
+) -> dict:
+    query = (
+        select(Lot)
+        .options(selectinload(Lot.images))
+        .order_by(Lot.fetched_at.desc())
+        .limit(limit)
+    )
+    if source:
+        normalized_source = source.strip().lower()
+        if normalized_source not in {"copart", "iaai"}:
+            raise HTTPException(status_code=400, detail="source must be copart or iaai")
+        query = query.where(Lot.source == normalized_source)
+
+    lots = db.execute(query).scalars().all()
+    enqueued = 0
+    last_depth = 0
+    for lot in lots:
+        if len(lot.images) > max_existing_images:
+            continue
+        last_depth = enqueue_enrichment_job({"source": lot.source, "lot_number": lot.lot_number, "vin": lot.vin})
+        enqueued += 1
+
+    return {
+        "enqueued": enqueued,
+        "queue_depth": last_depth,
+        "source": source or "all",
+        "max_existing_images": max_existing_images,
+    }
 
 
 @router.post("/enrichment/process-one", dependencies=[Depends(_require_admin)])
@@ -580,6 +631,57 @@ def process_one_enrichment(db: Session = Depends(get_db)) -> dict:
         lot_number=str(job.get("lot_number") or ""),
         vin=str(job.get("vin")) if job.get("vin") else None,
     )
+
+
+@router.post("/enrichment/process-batch", dependencies=[Depends(_require_admin)])
+def process_batch_enrichment(
+    max_jobs: int = Query(default=25, ge=1, le=250),
+    db: Session = Depends(get_db),
+) -> dict:
+    processed_jobs = 0
+    total_images_added = 0
+    last_result: dict | None = None
+
+    for _ in range(max_jobs):
+        try:
+            job = pop_enrichment_job(timeout=1 if processed_jobs == 0 else 0)
+        except RedisError as exc:
+            raise HTTPException(status_code=503, detail=f"Queue unavailable: {exc}") from exc
+        if job is None:
+            break
+
+        result = enrich_lot_images(
+            db,
+            source=str(job.get("source") or "copart"),
+            lot_number=str(job.get("lot_number") or ""),
+            vin=str(job.get("vin")) if job.get("vin") else None,
+        )
+        processed_jobs += 1
+        total_images_added += int(result.get("images_added") or 0)
+        last_result = result
+
+    if processed_jobs == 0:
+        return {
+            "processed": False,
+            "message": "No enrichment jobs in queue",
+            "images_added": 0,
+            "processed_jobs": 0,
+            "total_images_added": 0,
+        }
+
+    message = f"Processed {processed_jobs} enrichment job{'s' if processed_jobs != 1 else ''}"
+    payload = {
+        "processed": True,
+        "message": message,
+        "images_added": int(last_result.get("images_added") or 0) if last_result else 0,
+        "processed_jobs": processed_jobs,
+        "total_images_added": total_images_added,
+    }
+    if last_result:
+        payload["vin"] = last_result.get("vin")
+        payload["source"] = last_result.get("source")
+        payload["lot_number"] = last_result.get("lot_number")
+    return payload
 
 
 @router.post("/copart-csv/run-once", dependencies=[Depends(_require_admin)])

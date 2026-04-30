@@ -75,6 +75,8 @@ type EnrichmentQueueDepth = {
 type EnrichmentEnqueueResult = {
   enqueued: number;
   queue_depth: number;
+  source?: string;
+  max_existing_images?: number;
 };
 
 type EnrichmentProcessResult = {
@@ -84,6 +86,8 @@ type EnrichmentProcessResult = {
   source?: string | null;
   lot_number?: string | null;
   images_added: number;
+  processed_jobs?: number;
+  total_images_added?: number;
 };
 
 type AutoRiaSnapshotResult = {
@@ -742,8 +746,8 @@ export default function IngestionPage() {
     setEnrichmentEnqueueResult(null);
     setLoadingEnrichmentEnqueue(true);
     try {
-      const params = new URLSearchParams({ limit: "1000", only_single_image: "true" });
-      const res = await fetch(`${API_BASE}/api/v1/ingestion/enrichment/enqueue-recent?${params.toString()}`, {
+      const params = new URLSearchParams({ limit: "1200", max_existing_images: "0" });
+      const res = await fetch(`${API_BASE}/api/v1/ingestion/enrichment/enqueue-missing-photos?${params.toString()}`, {
         method: "POST",
         headers: { "X-Admin-Token": adminToken.trim() }
       });
@@ -768,6 +772,26 @@ export default function IngestionPage() {
         headers: { "X-Admin-Token": adminToken.trim() }
       });
       if (!res.ok) throw new Error(await readApiError(res, "Failed to process enrichment queue"));
+      const json = (await res.json()) as EnrichmentProcessResult;
+      setEnrichmentProcessResult(json);
+      await checkEnrichmentQueueDepth();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Request failed");
+    } finally {
+      setLoadingEnrichmentProcess(false);
+    }
+  }
+
+  async function processBatchEnrichment() {
+    setError("");
+    setEnrichmentProcessResult(null);
+    setLoadingEnrichmentProcess(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/v1/ingestion/enrichment/process-batch?max_jobs=25`, {
+        method: "POST",
+        headers: { "X-Admin-Token": adminToken.trim() }
+      });
+      if (!res.ok) throw new Error(await readApiError(res, "Failed to process enrichment batch"));
       const json = (await res.json()) as EnrichmentProcessResult;
       setEnrichmentProcessResult(json);
       await checkEnrichmentQueueDepth();
@@ -1332,13 +1356,16 @@ export default function IngestionPage() {
             {loadingProcess ? "Processing" : "Process One"}
           </button>
           <button type="button" onClick={enqueueRecentEnrichment} disabled={loadingEnrichmentEnqueue || !adminToken.trim()}>
-            {loadingEnrichmentEnqueue ? "Enqueueing Enrichment" : "Enqueue Photo Enrichment"}
+            {loadingEnrichmentEnqueue ? "Enqueueing Missing Photos" : "Enqueue Missing Photos"}
           </button>
           <button type="button" onClick={checkEnrichmentQueueDepth} disabled={loadingEnrichmentDepth}>
             {loadingEnrichmentDepth ? "Checking Enrichment" : "Check Enrichment Depth"}
           </button>
           <button type="button" onClick={processOneEnrichment} disabled={loadingEnrichmentProcess || !adminToken.trim()}>
             {loadingEnrichmentProcess ? "Enriching One" : "Process One Enrichment"}
+          </button>
+          <button type="button" onClick={processBatchEnrichment} disabled={loadingEnrichmentProcess || !adminToken.trim()}>
+            {loadingEnrichmentProcess ? "Enriching Batch" : "Process 25 Enrichment"}
           </button>
           <button type="button" onClick={archiveCopartImages} disabled={loadingCopartArchive || !adminToken.trim()}>
             {loadingCopartArchive ? "Archiving Copart" : "Archive Copart Images"}
@@ -1401,6 +1428,7 @@ export default function IngestionPage() {
             <p className="label">Photo Enrichment Enqueue</p>
             <p>Enqueued: {enrichmentEnqueueResult.enqueued}</p>
             <p>Queue depth: {enrichmentEnqueueResult.queue_depth}</p>
+            <p>Source: {enrichmentEnqueueResult.source || "all"}</p>
           </div>
         )}
 
@@ -1417,6 +1445,8 @@ export default function IngestionPage() {
                 : "-"}
             </p>
             <p>Images added: {enrichmentProcessResult.images_added}</p>
+            <p>Jobs processed: {enrichmentProcessResult.processed_jobs ?? (enrichmentProcessResult.processed ? 1 : 0)}</p>
+            <p>Total images added: {enrichmentProcessResult.total_images_added ?? enrichmentProcessResult.images_added}</p>
           </div>
         )}
 
