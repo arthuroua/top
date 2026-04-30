@@ -86,6 +86,7 @@ export default function HomePage() {
   const [query, setQuery] = useState("");
   const [vehicles, setVehicles] = useState<RecentVehicle[]>([]);
   const [loading, setLoading] = useState(true);
+  const [recentPhotosMissing, setRecentPhotosMissing] = useState(false);
   const quickPickerBrands = useMemo(
     () =>
       SEO_MODEL_MENU.map((item) => ({
@@ -106,7 +107,8 @@ export default function HomePage() {
         const primaryItems = primaryData.items || [];
         const primaryWithPhotos = primaryItems.filter((item) => Boolean(item.image_url));
         if (alive) {
-          setVehicles((primaryWithPhotos.length > 0 ? primaryWithPhotos : primaryItems).slice(0, 8));
+          setVehicles(primaryWithPhotos.slice(0, 8));
+          setRecentPhotosMissing(primaryItems.length > 0 && primaryWithPhotos.length === 0);
         }
       } finally {
         if (alive) setLoading(false);
@@ -183,7 +185,7 @@ export default function HomePage() {
               return (
                 <Link key={`${item.vin}-${item.lot_number}`} href={`/auto/${item.vin}`} className="recentVehicleCard">
                   <div className="recentVehicleImage">
-                    {imageUrl ? <img src={imageUrl} alt={toVehicleName(item)} loading="lazy" /> : <span>No photo</span>}
+                    {imageUrl ? <img src={imageUrl} alt={toVehicleName(item)} loading="lazy" /> : null}
                   </div>
                   <div className="recentVehicleBody">
                     <p className="label">VIN {item.vin}</p>
@@ -201,6 +203,14 @@ export default function HomePage() {
                 </Link>
               );
             })}
+          </div>
+        ) : recentPhotosMissing ? (
+          <div className="recentEmpty">
+            <h3>Фото ще не завантажені</h3>
+            <p>У базі вже є завершені лоти, але для останніх записів джерело ще не віддало зображення. Ціни й статуси збережені, фото підтягнемо окремим імпортом.</p>
+            <Link href="/search" className="button">
+              {dict.home.openSearch}
+            </Link>
           </div>
         ) : (
           <div className="recentEmpty">

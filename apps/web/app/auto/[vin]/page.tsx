@@ -347,6 +347,7 @@ export default async function AutoSeoPage({ params }: PageProps) {
   const latestLot = lots[0];
   const auctionSpecRows = buildAuctionSpecRows(latestLot);
   const latestLotImages = latestLot ? collectImages([latestLot]) : [];
+  const hasLatestLotImages = latestLotImages.length > 0;
   const relatedClusterHref =
     vehicle.make && vehicle.model && vehicle.year
       ? `/cars/${slugify(vehicle.make)}/${slugify(vehicle.model)}/${vehicle.year}`
@@ -469,7 +470,15 @@ export default async function AutoSeoPage({ params }: PageProps) {
           <a href="#vin-history">{dict.auto.updateLogTitle}</a>
         </div>
         <div className="autoBidfaxGrid" id="vin-overview">
-          <AutoPhotoGallery images={latestLotImages} vehicleName={vehicleName} />
+          {hasLatestLotImages ? (
+            <AutoPhotoGallery images={latestLotImages} vehicleName={vehicleName} />
+          ) : (
+            <div className="spotlightEmpty autoNoPhotoPanel">
+              <p className="label">Фото</p>
+              <h3>Фото ще не завантажені</h3>
+              <p>Для цього завершеного лота зараз збережені ціна, статус, VIN і характеристики, але саме фото джерело ще не віддало в імпорт.</p>
+            </div>
+          )}
           <aside className="autoBidfaxSummary">
             <div className="purchasePriceHero">
               <p>{lotPriceLabel(latestLot, dict)}</p>
