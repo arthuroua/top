@@ -52,7 +52,22 @@ function toDisplayImageUrl(value: string | null): string | null {
 
 function isSoldStatus(status: string | null | undefined): boolean {
   const normalized = (status || "").toLowerCase();
-  return normalized.includes("sold") || normalized.includes("closed");
+  if (
+    normalized.includes("on approval") ||
+    normalized.includes("on minimum bid") ||
+    normalized.includes("minimum bid") ||
+    normalized.includes("pure sale")
+  ) {
+    return false;
+  }
+  return (
+    normalized.includes("sold") ||
+    normalized.includes("closed") ||
+    normalized.includes("paid") ||
+    normalized.includes("won / to be paid") ||
+    normalized === "won" ||
+    normalized.startsWith("won ")
+  );
 }
 
 function getPriceLabel(item: RecentVehicle, dict: ReturnType<typeof useI18n>["dict"]): string {
