@@ -187,16 +187,32 @@ def list_recent_vehicles(
     db: Session = Depends(get_db),
 ) -> RecentVehiclesResponse:
     safe_limit = min(max(limit, 1), 24)
-    fetch_window = max(safe_limit * 250, 3000) if final_only else max(safe_limit * 20, 240)
-    query = (
+    base_query = (
         select(Lot)
         .options(selectinload(Lot.images), selectinload(Lot.vehicle), selectinload(Lot.import_snapshots))
         .where(Lot.hammer_price_usd.is_not(None), Lot.hammer_price_usd > 0)
     )
     if final_only:
-        query = query.where(confirmed_sale_status_clause(Lot.status))
-    lots = db.execute(query.order_by(Lot.sale_date.desc(), Lot.fetched_at.desc()).limit(fetch_window)).scalars().all()
-    public_lots = [lot for lot in lots if is_public_real_lot(lot)]
+        base_query = base_query.where(confirmed_sale_status_clause(Lot.status))
+
+    photo_first_query = (
+        base_query.join(LotImage, LotImage.lot_id == Lot.id)
+        .order_by(Lot.sale_date.desc(), Lot.fetched_at.desc())
+        .limit(max(safe_limit * 200, 4000))
+    )
+    photo_first_lots = db.execute(photo_first_query).scalars().unique().all()
+    public_lots = [lot for lot in photo_first_lots if is_public_real_lot(lot) and _first_safe_image(lot)]
+
+    if len(public_lots) < safe_limit:
+        fetch_window = max(safe_limit * 250, 3000) if final_only else max(safe_limit * 20, 240)
+        lots = db.execute(base_query.order_by(Lot.sale_date.desc(), Lot.fetched_at.desc()).limit(fetch_window)).scalars().all()
+        seen_lot_ids = {lot.id for lot in public_lots}
+        public_lots.extend(
+            lot
+            for lot in lots
+            if is_public_real_lot(lot) and lot.id not in seen_lot_ids
+        )
+
     public_lots.sort(key=lambda lot: (_first_safe_image(lot) is not None, lot.fetched_at), reverse=True)
     public_lots = public_lots[:safe_limit]
     return RecentVehiclesResponse(
