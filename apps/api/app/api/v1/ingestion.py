@@ -600,16 +600,20 @@ def enqueue_missing_photo_enrichment(
 
     lots = db.execute(query).scalars().all()
     enqueued = 0
-    last_depth = 0
     for lot in lots:
         if len(lot.images) > max_existing_images:
             continue
-        last_depth = enqueue_enrichment_job({"source": lot.source, "lot_number": lot.lot_number, "vin": lot.vin})
+        enqueue_enrichment_job({"source": lot.source, "lot_number": lot.lot_number, "vin": lot.vin})
         enqueued += 1
+
+    try:
+        current_depth = enrichment_queue_depth()
+    except RedisError as exc:
+        raise HTTPException(status_code=503, detail=f"Queue unavailable: {exc}") from exc
 
     return {
         "enqueued": enqueued,
-        "queue_depth": last_depth,
+        "queue_depth": current_depth,
         "source": source or "all",
         "max_existing_images": max_existing_images,
     }
@@ -661,13 +665,23 @@ def process_batch_enrichment(
         last_result = result
 
     if processed_jobs == 0:
+        try:
+            remaining_depth = enrichment_queue_depth()
+        except RedisError as exc:
+            raise HTTPException(status_code=503, detail=f"Queue unavailable: {exc}") from exc
         return {
             "processed": False,
             "message": "No enrichment jobs in queue",
             "images_added": 0,
             "processed_jobs": 0,
             "total_images_added": 0,
+            "remaining_queue_depth": remaining_depth,
         }
+
+    try:
+        remaining_depth = enrichment_queue_depth()
+    except RedisError as exc:
+        raise HTTPException(status_code=503, detail=f"Queue unavailable: {exc}") from exc
 
     message = f"Processed {processed_jobs} enrichment job{'s' if processed_jobs != 1 else ''}"
     payload = {
@@ -676,6 +690,7 @@ def process_batch_enrichment(
         "images_added": int(last_result.get("images_added") or 0) if last_result else 0,
         "processed_jobs": processed_jobs,
         "total_images_added": total_images_added,
+        "remaining_queue_depth": remaining_depth,
     }
     if last_result:
         payload["vin"] = last_result.get("vin")

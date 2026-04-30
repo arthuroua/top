@@ -88,6 +88,7 @@ type EnrichmentProcessResult = {
   images_added: number;
   processed_jobs?: number;
   total_images_added?: number;
+  remaining_queue_depth?: number;
 };
 
 type AutoRiaSnapshotResult = {
@@ -531,6 +532,7 @@ export default function IngestionPage() {
   useEffect(() => {
     void loadConnectorStatuses();
     void loadConnectorRuns(DEFAULT_AUDIT_FILTERS, 1);
+    void checkEnrichmentQueueDepth();
   }, []);
 
   function setField<K extends keyof IngestionForm>(key: K, value: IngestionForm[K]) {
@@ -782,12 +784,12 @@ export default function IngestionPage() {
     }
   }
 
-  async function processBatchEnrichment() {
+  async function processBatchEnrichment(maxJobs = 5) {
     setError("");
     setEnrichmentProcessResult(null);
     setLoadingEnrichmentProcess(true);
     try {
-      const res = await fetch(`${API_BASE}/api/v1/ingestion/enrichment/process-batch?max_jobs=25`, {
+      const res = await fetch(`${API_BASE}/api/v1/ingestion/enrichment/process-batch?max_jobs=${maxJobs}`, {
         method: "POST",
         headers: { "X-Admin-Token": adminToken.trim() }
       });
@@ -1364,7 +1366,10 @@ export default function IngestionPage() {
           <button type="button" onClick={processOneEnrichment} disabled={loadingEnrichmentProcess || !adminToken.trim()}>
             {loadingEnrichmentProcess ? "Enriching One" : "Process One Enrichment"}
           </button>
-          <button type="button" onClick={processBatchEnrichment} disabled={loadingEnrichmentProcess || !adminToken.trim()}>
+          <button type="button" onClick={() => processBatchEnrichment(5)} disabled={loadingEnrichmentProcess || !adminToken.trim()}>
+            {loadingEnrichmentProcess ? "Enriching Batch" : "Process 5 Enrichment"}
+          </button>
+          <button type="button" onClick={() => processBatchEnrichment(25)} disabled={loadingEnrichmentProcess || !adminToken.trim()}>
             {loadingEnrichmentProcess ? "Enriching Batch" : "Process 25 Enrichment"}
           </button>
           <button type="button" onClick={archiveCopartImages} disabled={loadingCopartArchive || !adminToken.trim()}>
@@ -1420,6 +1425,11 @@ export default function IngestionPage() {
           <div className="panel reportSaved">
             <p className="label">Enrichment Queue Depth</p>
             <h3>{enrichmentDepthResult.queue_depth}</h3>
+            <p>
+              {enrichmentDepthResult.queue_depth > 0
+                ? "Jobs are already waiting in queue. Use Process 5 first so the request returns faster."
+                : "Queue is empty right now."}
+            </p>
           </div>
         )}
 
@@ -1429,6 +1439,9 @@ export default function IngestionPage() {
             <p>Enqueued: {enrichmentEnqueueResult.enqueued}</p>
             <p>Queue depth: {enrichmentEnqueueResult.queue_depth}</p>
             <p>Source: {enrichmentEnqueueResult.source || "all"}</p>
+            {enrichmentEnqueueResult.enqueued === 0 && enrichmentEnqueueResult.queue_depth > 0 && (
+              <p>No new jobs were added because the queue already contains pending enrichment work.</p>
+            )}
           </div>
         )}
 
@@ -1447,6 +1460,7 @@ export default function IngestionPage() {
             <p>Images added: {enrichmentProcessResult.images_added}</p>
             <p>Jobs processed: {enrichmentProcessResult.processed_jobs ?? (enrichmentProcessResult.processed ? 1 : 0)}</p>
             <p>Total images added: {enrichmentProcessResult.total_images_added ?? enrichmentProcessResult.images_added}</p>
+            <p>Queue depth now: {enrichmentProcessResult.remaining_queue_depth ?? enrichmentDepthResult?.queue_depth ?? "-"}</p>
           </div>
         )}
 
