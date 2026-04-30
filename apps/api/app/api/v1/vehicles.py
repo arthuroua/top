@@ -1,7 +1,7 @@
 import os
 from urllib.parse import urlparse
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
@@ -181,19 +181,20 @@ def _first_safe_image(lot: Lot) -> str | None:
 
 
 @router.get("/vehicles/recent", response_model=RecentVehiclesResponse)
-def list_recent_vehicles(limit: int = 12, db: Session = Depends(get_db)) -> RecentVehiclesResponse:
+def list_recent_vehicles(
+    limit: int = 12,
+    final_only: bool = Query(default=True),
+    db: Session = Depends(get_db),
+) -> RecentVehiclesResponse:
     safe_limit = min(max(limit, 1), 24)
-    lots = (
-        db.execute(
-            select(Lot)
-            .options(selectinload(Lot.images), selectinload(Lot.vehicle), selectinload(Lot.import_snapshots))
-            .where(Lot.hammer_price_usd.is_not(None), Lot.hammer_price_usd > 0, confirmed_sale_status_clause(Lot.status))
-            .order_by(Lot.fetched_at.desc(), Lot.sale_date.desc())
-            .limit(max(safe_limit * 20, 240))
-        )
-        .scalars()
-        .all()
+    query = (
+        select(Lot)
+        .options(selectinload(Lot.images), selectinload(Lot.vehicle), selectinload(Lot.import_snapshots))
+        .where(Lot.hammer_price_usd.is_not(None), Lot.hammer_price_usd > 0)
     )
+    if final_only:
+        query = query.where(confirmed_sale_status_clause(Lot.status))
+    lots = db.execute(query.order_by(Lot.fetched_at.desc(), Lot.sale_date.desc()).limit(max(safe_limit * 20, 240))).scalars().all()
     public_lots = [lot for lot in lots if is_public_real_lot(lot)]
     public_lots.sort(key=lambda lot: (_first_safe_image(lot) is not None, lot.fetched_at), reverse=True)
     public_lots = public_lots[:safe_limit]
