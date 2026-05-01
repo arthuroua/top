@@ -10,6 +10,7 @@ from app.db import get_db
 from app.models import Lot, Vehicle
 from app.schemas import SearchResolveResult, SearchResult
 from app.services.public_lots import is_public_real_lot
+from app.services.sales_status import confirmed_sale_status_clause
 
 router = APIRouter(prefix="/api/v1", tags=["search"])
 
@@ -110,6 +111,7 @@ def _search_vin_in_db(db: Session, vin_key: str) -> SearchResult | None:
             select(Lot)
             .options(selectinload(Lot.import_snapshots))
             .where(Lot.vin == vin_key)
+            .where(Lot.hammer_price_usd.is_not(None), Lot.hammer_price_usd > 0, confirmed_sale_status_clause(Lot.status))
             .order_by(Lot.sale_date.desc(), Lot.fetched_at.desc())
         )
         .scalars()
@@ -123,7 +125,12 @@ def _search_vin_in_db(db: Session, vin_key: str) -> SearchResult | None:
 
 
 def _find_vin_by_lot_in_db(db: Session, lot_number: str, source_hint: str | None) -> tuple[str, str | None] | None:
-    query = select(Lot).options(selectinload(Lot.import_snapshots)).where(func.upper(Lot.lot_number) == lot_number)
+    query = (
+        select(Lot)
+        .options(selectinload(Lot.import_snapshots))
+        .where(func.upper(Lot.lot_number) == lot_number)
+        .where(Lot.hammer_price_usd.is_not(None), Lot.hammer_price_usd > 0, confirmed_sale_status_clause(Lot.status))
+    )
     if source_hint:
         query = query.where(func.lower(Lot.source) == source_hint)
     query = query.order_by(Lot.sale_date.desc(), Lot.fetched_at.desc())
