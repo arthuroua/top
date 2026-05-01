@@ -50,6 +50,13 @@ function toDisplayImageUrl(value: string | null): string | null {
   return value;
 }
 
+function getRecentCardImageUrl(item: RecentVehicle): string | null {
+  const direct = toDisplayImageUrl(item.image_url);
+  if (direct) return direct;
+  if (!item.vin || !item.lot_number) return null;
+  return `${API_BASE}/api/v1/media/vehicles/${encodeURIComponent(item.vin)}/lots/${encodeURIComponent(item.lot_number)}/images/0`;
+}
+
 function isSoldStatus(status: string | null | undefined): boolean {
   const normalized = (status || "").toLowerCase();
   if (
@@ -104,7 +111,7 @@ export default function HomePage() {
         if (!primaryResponse.ok) return;
         const primaryData = (await primaryResponse.json()) as RecentVehiclesResponse;
         const primaryItems = primaryData.items || [];
-        const primaryWithPhotos = primaryItems.filter((item) => Boolean(toDisplayImageUrl(item.image_url)));
+        const primaryWithPhotos = primaryItems.filter((item) => Boolean(getRecentCardImageUrl(item)));
         if (alive) {
           setVehicles(primaryWithPhotos.slice(0, 8));
         }
@@ -189,7 +196,7 @@ export default function HomePage() {
         ) : vehicles.length > 0 ? (
           <div className="recentVehiclesGrid">
             {vehicles.map((item) => {
-              const imageUrl = toDisplayImageUrl(item.image_url);
+              const imageUrl = getRecentCardImageUrl(item);
               return (
                 <Link key={`${item.vin}-${item.lot_number}`} href={`/auto/${item.vin}`} className="recentVehicleCard">
                   <div className={`recentVehicleImage ${imageUrl ? "" : "recentVehicleImagePlaceholder"}`}>
