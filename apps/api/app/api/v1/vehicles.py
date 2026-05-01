@@ -185,6 +185,33 @@ def _first_safe_image(lot: Lot) -> str | None:
     return None
 
 
+def _first_recent_card_image(lot: Lot) -> str | None:
+    images = _sorted_lot_images(lot)
+    if not images:
+        return None
+
+    image_indexes = {image.id: index for index, image in enumerate(images)}
+    preferred_images = _preferred_lot_images(lot)
+
+    for image in preferred_images:
+        if image.image_url.startswith("/api/v1/media/archive/"):
+            return image.image_url
+        if hide_data_source():
+            index = image_indexes.get(image.id, 0)
+            return f"/api/v1/media/vehicles/{lot.vin}/lots/{lot.lot_number}/images/{index}"
+        return image.image_url
+
+    # Recent feed should still show real photos when the source URL itself is not
+    # safe to expose directly: the media proxy can fetch them by image index.
+    if hide_data_source():
+        return f"/api/v1/media/vehicles/{lot.vin}/lots/{lot.lot_number}/images/0"
+
+    for image in images:
+        if image.image_url:
+            return image.image_url
+    return None
+
+
 def _not_excluded_sale_status_clause():
     normalized = func.lower(func.coalesce(Lot.status, ""))
     return ~(
@@ -216,7 +243,7 @@ def list_recent_vehicles(
         .limit(max(safe_limit * 200, 4000))
     )
     photo_first_lots = db.execute(photo_first_query).scalars().unique().all()
-    public_lots = [lot for lot in photo_first_lots if is_public_real_lot(lot) and _first_safe_image(lot)]
+    public_lots = [lot for lot in photo_first_lots if is_public_real_lot(lot) and _first_recent_card_image(lot)]
 
     if len(public_lots) < safe_limit:
         fetch_window = max(safe_limit * 250, 3000) if final_only else max(safe_limit * 20, 240)
@@ -228,8 +255,8 @@ def list_recent_vehicles(
             if is_public_real_lot(lot) and lot.id not in seen_lot_ids
         )
 
-    public_lots.sort(key=lambda lot: (_first_safe_image(lot) is not None, lot.fetched_at), reverse=True)
-    if len([lot for lot in public_lots if _first_safe_image(lot)]) < safe_limit:
+    public_lots.sort(key=lambda lot: (_first_recent_card_image(lot) is not None, lot.fetched_at), reverse=True)
+    if len([lot for lot in public_lots if _first_recent_card_image(lot)]) < safe_limit:
         relaxed_query = (
             select(Lot)
             .options(selectinload(Lot.images), selectinload(Lot.vehicle), selectinload(Lot.import_snapshots))
@@ -244,9 +271,9 @@ def list_recent_vehicles(
         public_lots.extend(
             lot
             for lot in relaxed_lots
-            if is_public_real_lot(lot) and _first_safe_image(lot) and lot.id not in seen_lot_ids
+            if is_public_real_lot(lot) and _first_recent_card_image(lot) and lot.id not in seen_lot_ids
         )
-        public_lots.sort(key=lambda lot: (_first_safe_image(lot) is not None, lot.fetched_at), reverse=True)
+        public_lots.sort(key=lambda lot: (_first_recent_card_image(lot) is not None, lot.fetched_at), reverse=True)
     public_lots = public_lots[:safe_limit]
     return RecentVehiclesResponse(
         items=[
@@ -261,7 +288,7 @@ def list_recent_vehicles(
                 hammer_price_usd=lot.hammer_price_usd,
                 status=lot.status,
                 location=lot.location,
-                image_url=_first_safe_image(lot),
+                image_url=_first_recent_card_image(lot),
                 updated_at=lot.fetched_at,
             )
             for lot in public_lots
