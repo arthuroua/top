@@ -10,7 +10,7 @@ from app.db import get_db
 from app.models import Lot, LotImage, Vehicle
 from app.schemas import LotImageItem, LotItem, PriceEventItem, RecentVehicleItem, RecentVehiclesResponse, VehicleCard
 from app.services.public_lots import is_public_real_lot, latest_import_payload
-from app.services.sales_status import confirmed_sale_status_clause
+from app.services.sales_status import EXCLUDED_SALE_KEYWORDS, confirmed_sale_status_clause
 
 router = APIRouter(prefix="/api/v1", tags=["vehicles"])
 
@@ -180,6 +180,16 @@ def _first_safe_image(lot: Lot) -> str | None:
     return None
 
 
+def _not_excluded_sale_status_clause():
+    normalized = func.lower(func.coalesce(Lot.status, ""))
+    return ~(
+        normalized.like(f"%{EXCLUDED_SALE_KEYWORDS[0]}%")
+        | normalized.like(f"%{EXCLUDED_SALE_KEYWORDS[1]}%")
+        | normalized.like(f"%{EXCLUDED_SALE_KEYWORDS[2]}%")
+        | normalized.like(f"%{EXCLUDED_SALE_KEYWORDS[3]}%")
+    )
+
+
 @router.get("/vehicles/recent", response_model=RecentVehiclesResponse)
 def list_recent_vehicles(
     limit: int = 12,
@@ -214,6 +224,24 @@ def list_recent_vehicles(
         )
 
     public_lots.sort(key=lambda lot: (_first_safe_image(lot) is not None, lot.fetched_at), reverse=True)
+    if len([lot for lot in public_lots if _first_safe_image(lot)]) < safe_limit:
+        relaxed_query = (
+            select(Lot)
+            .options(selectinload(Lot.images), selectinload(Lot.vehicle), selectinload(Lot.import_snapshots))
+            .join(LotImage, LotImage.lot_id == Lot.id)
+            .where(Lot.hammer_price_usd.is_not(None), Lot.hammer_price_usd > 0)
+            .where(_not_excluded_sale_status_clause())
+            .order_by(Lot.sale_date.desc(), Lot.fetched_at.desc())
+            .limit(max(safe_limit * 200, 4000))
+        )
+        relaxed_lots = db.execute(relaxed_query).scalars().unique().all()
+        seen_lot_ids = {lot.id for lot in public_lots}
+        public_lots.extend(
+            lot
+            for lot in relaxed_lots
+            if is_public_real_lot(lot) and _first_safe_image(lot) and lot.id not in seen_lot_ids
+        )
+        public_lots.sort(key=lambda lot: (_first_safe_image(lot) is not None, lot.fetched_at), reverse=True)
     public_lots = public_lots[:safe_limit]
     return RecentVehiclesResponse(
         items=[
