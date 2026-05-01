@@ -100,13 +100,13 @@ export default function HomePage() {
     let alive = true;
     async function loadRecent() {
       try {
-        const primaryResponse = await fetch(`${API_BASE}/api/v1/vehicles/recent?limit=24`);
+        const primaryResponse = await fetch(`${API_BASE}/api/v1/vehicles/recent?limit=72`);
         if (!primaryResponse.ok) return;
         const primaryData = (await primaryResponse.json()) as RecentVehiclesResponse;
         const primaryItems = primaryData.items || [];
-        const primaryWithPhotos = primaryItems.filter((item) => Boolean(item.image_url));
+        const primaryWithPhotos = primaryItems.filter((item) => Boolean(toDisplayImageUrl(item.image_url)));
         if (alive) {
-          setVehicles((primaryWithPhotos.length > 0 ? primaryWithPhotos : primaryItems).slice(0, 8));
+          setVehicles(primaryWithPhotos.slice(0, 8));
         }
       } finally {
         if (alive) setLoading(false);
@@ -195,12 +195,7 @@ export default function HomePage() {
                   <div className={`recentVehicleImage ${imageUrl ? "" : "recentVehicleImagePlaceholder"}`}>
                     {imageUrl ? (
                       <img src={imageUrl} alt={toVehicleName(item)} loading="lazy" />
-                    ) : (
-                      <div className="recentVehicleImageFallback" aria-hidden="true">
-                        <strong>{toMonogram(item)}</strong>
-                        <span>{dict.home.recentPhotoPending}</span>
-                      </div>
-                    )}
+                    ) : null}
                   </div>
                   <div className="recentVehicleBody">
                     <p className="label">VIN {item.vin}</p>

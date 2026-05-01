@@ -430,6 +430,7 @@ a {
   height: 100%;
   object-fit: cover;
   display: block;
+  image-rendering: auto;
 }
 
 .recentVehicleImagePlaceholder {
@@ -1528,6 +1529,12 @@ select:focus {
   gap: 12px;
 }
 
+.autoTopGalleryStage {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
 .autoTopMainPhoto,
 .autoTopThumbs button,
 .autoTopMoreThumbs button {
@@ -1570,7 +1577,6 @@ select:focus {
 }
 
 .autoTopMoreThumbs {
-  grid-column: 1 / -1;
   display: flex;
   gap: 8px;
   overflow-x: auto;
@@ -1581,6 +1587,18 @@ select:focus {
   flex: 0 0 92px;
   border-radius: 14px;
   box-shadow: none;
+}
+
+.autoTopThumbCounter {
+  flex: 0 0 92px;
+  min-height: 69px;
+  border-radius: 14px;
+  border: 1px dashed rgba(27, 79, 153, 0.22);
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--accent-strong);
+  font-family: var(--font-mono), Consolas, monospace;
+  font-size: 1rem;
+  cursor: pointer;
 }
 
 .autoTopMoreThumbs img {
@@ -1611,6 +1629,40 @@ select:focus {
   top: 88px;
   display: grid;
   gap: 12px;
+}
+
+.autoBidfaxDetailsTable {
+  display: grid;
+  gap: 0;
+  overflow: hidden;
+  border: 1px solid rgba(27, 79, 153, 0.12);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.88);
+}
+
+.autoBidfaxDetailsRow {
+  display: grid;
+  grid-template-columns: minmax(110px, 0.82fr) minmax(0, 1.18fr);
+  gap: 10px;
+  align-items: start;
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(27, 79, 153, 0.1);
+}
+
+.autoBidfaxDetailsRow:last-child {
+  border-bottom: 0;
+}
+
+.autoBidfaxDetailsRow span {
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.autoBidfaxDetailsRow strong {
+  color: var(--text);
+  font-size: 0.95rem;
+  font-weight: 600;
+  overflow-wrap: anywhere;
 }
 
 .autoBidfaxFacts {
@@ -1661,6 +1713,15 @@ select:focus {
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.78);
   color: var(--text);
+}
+
+.autoPhotoPlaceholderCompact {
+  min-height: 420px;
+  align-content: center;
+}
+
+.autoPhotoPlaceholderCompact h3 {
+  font-size: clamp(1.4rem, 3vw, 2rem);
 }
 
 .autoCompactOverview .autoSeoQuickFacts {
@@ -2804,6 +2865,10 @@ html[data-theme="dark"] .lotCard {
 
 .lotSpotlightGridNoGallery {
   grid-template-columns: 1fr;
+}
+
+.autoSeoLotGridCompact .autoSeoLotCard {
+  gap: 8px;
 }
 
 .lotSpotlightGridNoGallery .lotSpotlightFacts {

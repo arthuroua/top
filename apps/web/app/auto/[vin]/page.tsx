@@ -357,6 +357,14 @@ export default async function AutoSeoPage({ params }: PageProps) {
   const images = collectImages(lots);
   const latestLot = lots[0];
   const auctionSpecRows = buildAuctionSpecRows(latestLot);
+  const primaryFactRows = [
+    ["Auction", latestLot?.source?.toUpperCase() || latestLot?.source || "-"],
+    ["Lot", latestLot?.lot_number ? `#${latestLot.lot_number}` : "-"],
+    ["Status", latestLot?.status || "-"],
+    [dict.search.saleDate, latestLot?.sale_date || "-"],
+    [dict.search.location, latestLot?.location || "-"],
+    ...auctionSpecRows
+  ].slice(0, 12);
   const latestLotImages = latestLot ? collectImages([latestLot]) : [];
   const hasLatestLotImages = latestLotImages.length > 0;
   const relatedClusterHref =
@@ -484,7 +492,7 @@ export default async function AutoSeoPage({ params }: PageProps) {
           {hasLatestLotImages ? (
             <AutoPhotoGallery images={latestLotImages} vehicleName={vehicleName} />
           ) : (
-            <div className="spotlightEmpty autoNoPhotoPanel autoPhotoPlaceholder">
+            <div className="spotlightEmpty autoNoPhotoPanel autoPhotoPlaceholder autoPhotoPlaceholderCompact">
               <div className="autoPhotoPlaceholderBadge">{dict.auto.photoPendingBadge}</div>
               <strong>{vehicleMonogram}</strong>
               <h3>{vehicleName}</h3>
@@ -531,6 +539,14 @@ export default async function AutoSeoPage({ params }: PageProps) {
                 <dd>#{latestLot?.lot_number || "-"}</dd>
               </div>
             </dl>
+            <div className="autoBidfaxDetailsTable">
+              {primaryFactRows.map(([label, value]) => (
+                <div key={`${label}-${value}`} className="autoBidfaxDetailsRow">
+                  <span>{label}</span>
+                  <strong>{value}</strong>
+                </div>
+              ))}
+            </div>
           </aside>
         </div>
       </section>
@@ -546,7 +562,7 @@ export default async function AutoSeoPage({ params }: PageProps) {
       )}
 
       {auctionSpecRows.length > 0 && (
-        <section className="panel auctionSpecsPanel compactSpecsPanel">
+        <section className="panel auctionSpecsPanel compactSpecsPanel" id="vin-specs">
           <h2>{dict.search.auctionSpecs.title}</h2>
           <dl className="auctionSpecsGrid">
             {auctionSpecRows.map(([label, value]) => (
@@ -601,7 +617,7 @@ export default async function AutoSeoPage({ params }: PageProps) {
       )}
 
       {decoded && (
-        <section className="panel decoderPanel" id="vin-specs">
+        <section className="panel decoderPanel">
           <div className="sectionHead">
             <div>
               <h2>{dict.auto.decoderTitle}</h2>
@@ -645,7 +661,7 @@ export default async function AutoSeoPage({ params }: PageProps) {
         {lots.length === 0 ? (
           <p>No lots found for this VIN.</p>
         ) : (
-          <div className="autoSeoLotGrid">
+          <div className="autoSeoLotGrid autoSeoLotGridCompact">
             {lots.map((lot, index) => {
               const lotImages = collectImages([lot]).slice(0, 3);
               return (
