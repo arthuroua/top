@@ -38,6 +38,8 @@ def get_vehicle_stats(db: Session = Depends(get_db)) -> dict:
 def _is_direct_image_url(url: str) -> bool:
     if url.startswith("/api/v1/media/archive/"):
         return True
+    if url.startswith("/api/v1/media/vehicles/"):
+        return True
     lowered = url.lower().split("?", 1)[0].split("#", 1)[0]
     return lowered.endswith((".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp", ".avif"))
 
