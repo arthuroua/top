@@ -8,6 +8,8 @@ This project is ready to deploy with the following recommended topology:
 - `redis`: Redis
 - `ingestion-worker`: background worker
 - `copart-csv-scheduler`: optional scheduler for CSV imports
+- `enrichment-worker`: background worker for photo enrichment
+- `enrichment-scheduler`: optional scheduler that auto-enqueues lots missing photos
 
 ## Recommended stack
 
@@ -85,6 +87,65 @@ python -m app.workers.ingestion_worker
 Env vars:
 
 - same as API for `DATABASE_URL`, `REDIS_URL`, and connector settings
+
+## Enrichment worker deploy
+
+Use the same image as `apps/api`.
+
+Command:
+
+```bash
+python -m app.workers.enrichment_worker
+```
+
+Env vars:
+
+- `DATABASE_URL`
+- `REDIS_URL`
+- `ENRICHMENT_QUEUE_KEY`
+- `MEDIA_ARCHIVE_ALLOWED_HOSTS`
+- `MEDIA_ARCHIVE_DIR`
+- `MEDIA_ARCHIVE_MAX_BYTES`
+- `MEDIA_ARCHIVE_TIMEOUT_SECONDS`
+- `ENRICHMENT_MAX_IMAGES_PER_LOT`
+- `ENRICHMENT_VERIFY_IMAGE_URLS`
+- `ENRICHMENT_IMAGE_HEAD_TIMEOUT_SECONDS`
+- `ENRICHMENT_REQUEST_DELAY_MS`
+- `IAAI_GALLERY_TIMEOUT_SECONDS`
+- `IAAI_GALLERY_RETRY_COUNT`
+- `IAAI_GALLERY_RETRY_BACKOFF_MS`
+- `IAAI_GALLERY_MAX_IMAGES_PER_LOT`
+
+## Enrichment scheduler deploy
+
+Use the same image as `apps/api`.
+
+Command:
+
+```bash
+python -m app.workers.enrichment_scheduler
+```
+
+Recommended env vars:
+
+- `DATABASE_URL`
+- `REDIS_URL`
+- `ENRICHMENT_QUEUE_KEY`
+- `ENRICHMENT_SCHEDULER_ENABLED=true`
+- `ENRICHMENT_SCHEDULER_RUN_ON_START=true`
+- `ENRICHMENT_SCHEDULER_INTERVAL_SECONDS=900`
+- `ENRICHMENT_SCHEDULER_SOURCE=all`
+- `ENRICHMENT_SCHEDULER_SCAN_LIMIT=500`
+- `ENRICHMENT_SCHEDULER_ENQUEUE_LIMIT=150`
+- `ENRICHMENT_SCHEDULER_MAX_EXISTING_IMAGES=0`
+- `ENRICHMENT_SCHEDULER_MAX_QUEUE_DEPTH=2000`
+
+How it works:
+
+- Scheduler scans the latest lots.
+- Lots with `<= ENRICHMENT_SCHEDULER_MAX_EXISTING_IMAGES` photos are added to Redis queue.
+- If queue depth is already high, scheduler skips the cycle so it does not flood Redis.
+- `enrichment-worker` consumes the queue continuously and writes real photos into DB/media archive.
 
 ## Scheduler deploy
 

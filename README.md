@@ -8,6 +8,7 @@ This repository contains the first working skeleton for a service focused on imp
 - `apps/web`: Next.js frontend with VIN search page
 - `docs/outreach`: ready email templates for Copart and IAA data-access requests
 - `docker-compose.yml`: local stack with API, web, PostgreSQL, Redis, and ingestion worker
+- automatic photo enrichment stack for Copart/IAAI via Redis queue
 - `docs/DEPLOY.md`: deployment guide for production setup
 
 ## MVP API routes
@@ -55,6 +56,20 @@ This repository contains the first working skeleton for a service focused on imp
   - `COPART_CSV_RUN_ON_START=false`
   - `COPART_CSV_MAX_ROWS_PER_RUN=0` (`0` = full file)
   - `COPART_CSV_DEDUPE_TTL_HOURS=168`
+
+### Photo enrichment automation
+
+- `enrichment-worker` consumes `ENRICHMENT_QUEUE_KEY` and archives real auction photos into DB.
+- `enrichment-scheduler` can automatically enqueue recent lots with missing photos.
+- Configure via `.env`:
+  - `ENRICHMENT_SCHEDULER_ENABLED=true`
+  - `ENRICHMENT_SCHEDULER_RUN_ON_START=true`
+  - `ENRICHMENT_SCHEDULER_INTERVAL_SECONDS=900`
+  - `ENRICHMENT_SCHEDULER_SOURCE=all`
+  - `ENRICHMENT_SCHEDULER_SCAN_LIMIT=500`
+  - `ENRICHMENT_SCHEDULER_ENQUEUE_LIMIT=150`
+  - `ENRICHMENT_SCHEDULER_MAX_EXISTING_IMAGES=0`
+  - `ENRICHMENT_SCHEDULER_MAX_QUEUE_DEPTH=2000`
 
 ## Quick start (Docker)
 

@@ -92,6 +92,38 @@ services:
     networks:
       - internal
 
+  enrichment-worker:
+    build:
+      context: ./apps/api
+    container_name: carimport-enrichment-worker
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    env_file:
+      - .env.production
+    command: ["python", "-m", "app.workers.enrichment_worker"]
+    networks:
+      - internal
+
+  enrichment-scheduler:
+    build:
+      context: ./apps/api
+    container_name: carimport-enrichment-scheduler
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    env_file:
+      - .env.production
+    command: ["python", "-m", "app.workers.enrichment_scheduler"]
+    networks:
+      - internal
+
   copart-csv-scheduler:
     build:
       context: ./apps/api
