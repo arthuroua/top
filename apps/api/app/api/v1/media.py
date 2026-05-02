@@ -79,7 +79,7 @@ def proxy_lot_image(vin: str, lot_number: str, image_index: int, db: Session = D
     if image_index < 0:
         raise HTTPException(status_code=400, detail="image_index must be >= 0")
 
-    lot = (
+    lots = (
         db.execute(
             select(Lot)
             .options(selectinload(Lot.images))
@@ -87,10 +87,12 @@ def proxy_lot_image(vin: str, lot_number: str, image_index: int, db: Session = D
             .order_by(Lot.fetched_at.desc())
         )
         .scalars()
-        .first()
+        .all()
     )
-    if lot is None:
+    if not lots:
         raise HTTPException(status_code=404, detail="Lot not found")
+
+    lot = next((candidate for candidate in lots if candidate.images), lots[0])
 
     images = sorted(lot.images, key=lambda item: ((item.shot_order is None), (item.shot_order or 0), item.created_at))
     if image_index >= len(images):
