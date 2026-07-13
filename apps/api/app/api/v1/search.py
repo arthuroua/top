@@ -102,21 +102,19 @@ def _extract_query_payload(query: str) -> tuple[str, str, str, str | None, str |
     raise HTTPException(status_code=400, detail="Provide valid VIN, lot number, or URL")
 
 
-def _search_vin_in_db(db: Session, vin_key: str) -> SearchResult | None:
+def _search_vin_in_db(db: Session, vin_key: str, include_active: bool = False) -> SearchResult | None:
     vehicle = db.get(Vehicle, vin_key)
     if vehicle is None:
         return None
-    lots = (
-        db.execute(
-            select(Lot)
-            .options(selectinload(Lot.import_snapshots))
-            .where(Lot.vin == vin_key)
-            .where(Lot.hammer_price_usd.is_not(None), Lot.hammer_price_usd > 0, confirmed_sale_status_clause(Lot.status))
-            .order_by(Lot.sale_date.desc(), Lot.fetched_at.desc())
-        )
-        .scalars()
-        .all()
+    lot_query = (
+        select(Lot)
+        .options(selectinload(Lot.import_snapshots))
+        .where(Lot.vin == vin_key)
+        .where(Lot.hammer_price_usd.is_not(None), Lot.hammer_price_usd > 0)
     )
+    if not include_active:
+        lot_query = lot_query.where(confirmed_sale_status_clause(Lot.status))
+    lots = db.execute(lot_query.order_by(Lot.sale_date.desc(), Lot.fetched_at.desc())).scalars().all()
     lots = [lot for lot in lots if is_public_real_lot(lot)]
     if not lots:
         return None
@@ -124,13 +122,20 @@ def _search_vin_in_db(db: Session, vin_key: str) -> SearchResult | None:
     return SearchResult(vin=vin_key, lots_found=len(lots), latest_status=latest_status)
 
 
-def _find_vin_by_lot_in_db(db: Session, lot_number: str, source_hint: str | None) -> tuple[str, str | None] | None:
+def _find_vin_by_lot_in_db(
+    db: Session,
+    lot_number: str,
+    source_hint: str | None,
+    include_active: bool = False,
+) -> tuple[str, str | None] | None:
     query = (
         select(Lot)
         .options(selectinload(Lot.import_snapshots))
         .where(func.upper(Lot.lot_number) == lot_number)
-        .where(Lot.hammer_price_usd.is_not(None), Lot.hammer_price_usd > 0, confirmed_sale_status_clause(Lot.status))
+        .where(Lot.hammer_price_usd.is_not(None), Lot.hammer_price_usd > 0)
     )
+    if not include_active:
+        query = query.where(confirmed_sale_status_clause(Lot.status))
     if source_hint:
         query = query.where(func.lower(Lot.source) == source_hint)
     query = query.order_by(Lot.sale_date.desc(), Lot.fetched_at.desc())
@@ -153,7 +158,11 @@ def search(vin: str = Query(min_length=17, max_length=17), db: Session = Depends
 
 
 @router.get("/search/resolve", response_model=SearchResolveResult)
-def resolve_search(query: str = Query(min_length=1, max_length=1024), db: Session = Depends(get_db)) -> SearchResolveResult:
+def resolve_search(
+    query: str = Query(min_length=1, max_length=1024),
+    include_active: bool = Query(default=False),
+    db: Session = Depends(get_db),
+) -> SearchResolveResult:
     query_type, matched_by, normalized_query, source_hint, lot_number = _extract_query_payload(query)
 
     vin_key: str | None = None
@@ -161,12 +170,12 @@ def resolve_search(query: str = Query(min_length=1, max_length=1024), db: Sessio
     if matched_by == "vin":
         vin_key = normalized_query
     else:
-        lot_result = _find_vin_by_lot_in_db(db, normalized_query, source_hint)
+        lot_result = _find_vin_by_lot_in_db(db, normalized_query, source_hint, include_active=include_active)
         if lot_result is None:
             raise HTTPException(status_code=404, detail="Lot not found")
         vin_key, matched_source = lot_result
 
-    db_result = _search_vin_in_db(db, vin_key)
+    db_result = _search_vin_in_db(db, vin_key, include_active=include_active)
     result = db_result
     if result is None:
         raise HTTPException(status_code=404, detail="Vehicle not found")

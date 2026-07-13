@@ -303,22 +303,24 @@ def list_recent_vehicles(
 
 
 @router.get("/vehicles/{vin}", response_model=VehicleCard)
-def get_vehicle(vin: str, db: Session = Depends(get_db)) -> VehicleCard:
+def get_vehicle(
+    vin: str,
+    include_active: bool = Query(default=False),
+    db: Session = Depends(get_db),
+) -> VehicleCard:
     vin_key = vin.upper()
 
     vehicle = db.get(Vehicle, vin_key)
     if vehicle is not None:
-        lots = (
-            db.execute(
-                select(Lot)
-                .options(selectinload(Lot.images), selectinload(Lot.price_events), selectinload(Lot.import_snapshots))
-                .where(Lot.vin == vin_key)
-                .where(Lot.hammer_price_usd.is_not(None), Lot.hammer_price_usd > 0, confirmed_sale_status_clause(Lot.status))
-                .order_by(Lot.sale_date.desc(), Lot.fetched_at.desc())
-            )
-            .scalars()
-            .all()
+        lot_query = (
+            select(Lot)
+            .options(selectinload(Lot.images), selectinload(Lot.price_events), selectinload(Lot.import_snapshots))
+            .where(Lot.vin == vin_key)
+            .where(Lot.hammer_price_usd.is_not(None), Lot.hammer_price_usd > 0)
         )
+        if not include_active:
+            lot_query = lot_query.where(confirmed_sale_status_clause(Lot.status))
+        lots = db.execute(lot_query.order_by(Lot.sale_date.desc(), Lot.fetched_at.desc())).scalars().all()
         public_lots = [lot for lot in lots if is_public_real_lot(lot)]
         if not public_lots:
             raise HTTPException(status_code=404, detail="Vehicle not found")
