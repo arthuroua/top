@@ -226,14 +226,20 @@ def _not_excluded_sale_status_clause():
 def list_recent_vehicles(
     limit: int = 12,
     final_only: bool = Query(default=True),
+    provider: str | None = Query(default=None),
     db: Session = Depends(get_db),
 ) -> RecentVehiclesResponse:
     safe_limit = min(max(limit, 1), 24)
+    normalized_provider = provider.strip().lower() if provider else None
+    if normalized_provider is not None and normalized_provider not in {"copart", "iaai"}:
+        raise HTTPException(status_code=400, detail="provider must be copart or iaai")
     base_query = (
         select(Lot)
         .options(selectinload(Lot.images), selectinload(Lot.vehicle), selectinload(Lot.import_snapshots))
         .where(Lot.hammer_price_usd.is_not(None), Lot.hammer_price_usd > 0)
     )
+    if normalized_provider:
+        base_query = base_query.where(func.lower(Lot.source) == normalized_provider)
     if final_only:
         base_query = base_query.where(confirmed_sale_status_clause(Lot.status))
 
